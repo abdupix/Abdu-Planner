@@ -1,7 +1,6 @@
 <!--
-this page is only for use by Abdu.
 ================================================================================
-Abdus Planner — personal daily planner on top of Google Calendar + Google Tasks
+DAYPLAN — personal daily planner on top of Google Calendar + Google Tasks
 ================================================================================
 Single user · no backend · no API keys · free to run.
 
@@ -41,8 +40,9 @@ in the task's notes as marker lines — visible in the Google Tasks app too):
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Abdu's Planner</title>
-<link rel="icon" type="image/x-icon" href="sunrise.ico">
+<title>dayplan</title>
+<link rel="icon" href="sunrise.ico" type="image/x-icon">
+<link rel="shortcut icon" href="sunrise.ico">
 <script>
 /* ============================ CONFIG ============================ */
 /* >>> PASTE YOUR GOOGLE OAUTH WEB CLIENT ID HERE <<< */
@@ -271,14 +271,12 @@ html.has-bg .nav-search input{background:var(--glass-hi)}
 .zoom button:hover{background:var(--surface);box-shadow:var(--sh-xs)}
 .zoom span{min-width:22px;text-align:center}
 .tide-banner{margin:0 8px 6px;border-radius:var(--r-card);padding:14px 16px;position:relative;overflow:hidden;cursor:pointer;transition:transform .3s var(--ease),box-shadow .3s;box-shadow:var(--sh-xs);
-   background:color-mix(in srgb, var(--canvas) var(--card-pct, 90%), transparent)}
+  background:color-mix(in srgb, var(--canvas) var(--card-pct, 90%), transparent)}
 .tide-banner:hover{transform:translateY(-1px);box-shadow:var(--sh-sm)}
-:root[data-theme="dark"] .tide-banner{filter:brightness(.55) saturate(.9)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tide-banner{filter:brightness(.55) saturate(.9)}}
-.tb-date{font-size:26px;font-weight:700;letter-spacing:-.03em;color:#111;display:block}
-.tb-sub{font-size:12.5px;color:#444}
-.tb-cap{font-size:12px;margin-top:4px;color:#333}.tb-cap.over{color:#b3261e;font-weight:600}
-.tb-go{position:absolute;right:12px;top:12px;color:#444;opacity:.6;transition:transform .3s var(--ease)}
+.tb-date{font-size:26px;font-weight:700;letter-spacing:-.03em;color:var(--ink);display:block}
+.tb-sub{font-size:12.5px;color:var(--ink-2)}
+.tb-cap{font-size:12px;margin-top:4px;color:var(--ink-2)}.tb-cap.over{color:var(--warn);font-weight:600}
+.tb-go{position:absolute;right:12px;top:12px;color:var(--ink-2);opacity:.6;transition:transform .3s var(--ease)}
 .tide-banner:hover .tb-go{transform:translate(2px,-2px);opacity:1}
 .fab{position:absolute;right:18px;bottom:18px;width:46px;height:46px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);box-shadow:0 6px 18px color-mix(in srgb,var(--accent) 50%,transparent),var(--sh-md);display:grid;place-items:center;z-index:12;transition:transform .2s var(--ease),box-shadow .2s,background .2s}
 .fab:hover{background:var(--accent-hover);transform:scale(1.08) rotate(90deg)}.fab:active{transform:scale(.94)}.fab .ic{width:22px;height:22px;stroke-width:2.2}
@@ -997,7 +995,7 @@ function whenGIS(cb) {
   let n = 0;
   const t = setInterval(() => {
     if (window.google && google.accounts && google.accounts.oauth2) { clearInterval(t); cb(); }
-    else if (++n > 100) { clearInterval(t); $('#app').hidden = true; $('#auth').hidden = false; authNote('Couldn’t load Google sign-in. Check your connection or any blocker for accounts.google.com, then reload.', true); }
+    else if (++n > 100) { clearInterval(t); if (S.demo || S.loaded) return; $('#app').hidden = true; $('#auth').hidden = false; authNote('Couldn’t load Google sign-in. Check your connection or any blocker for accounts.google.com, then reload.', true); }
   }, 100);
 }
 function authNote(msg, bad) { $('#authNote').innerHTML = msg ? `<p class="auth-note ${bad ? 'bad' : ''}">${msg}</p>` : ''; }
@@ -2442,7 +2440,8 @@ async function openPomodoro(t) {
   let w = null;
   try { w = window.open('', 'dayplan-focus', `popup=yes,width=380,height=520,left=${Math.max(0, (screen.availWidth || 1200) - 420)},top=80,toolbar=no,menubar=no,location=no,status=no,scrollbars=no`); } catch (e) {}
   if (w && w.document) {
-    w.document.open(); w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Focus</title></head><body></body></html>'); w.document.close();
+    const ico = document.querySelector('link[rel~="icon"]');   // the Focus popup gets the same icon
+    w.document.open(); w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Focus</title>' + (ico ? '<link rel="icon" href="' + ico.href + '">' : '') + '</head><body></body></html>'); w.document.close();
     [...document.querySelectorAll('style')].forEach(st => w.document.head.appendChild(st.cloneNode(true)));
     [...document.querySelectorAll('link[rel=stylesheet]')].forEach(l => { const c = w.document.createElement('link'); c.rel = 'stylesheet'; c.href = l.href; w.document.head.appendChild(c); });
     mountPomo(w.document, w, t, () => w.close(), false); return;
