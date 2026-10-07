@@ -271,7 +271,7 @@ html.has-bg .nav-search input{background:var(--glass-hi)}
 .zoom button:hover{background:var(--surface);box-shadow:var(--sh-xs)}
 .zoom span{min-width:22px;text-align:center}
 .tide-banner{margin:0 8px 6px;border-radius:var(--r-card);padding:14px 16px;position:relative;overflow:hidden;cursor:pointer;transition:transform .3s var(--ease),box-shadow .3s;box-shadow:var(--sh-xs);
- background:color-mix(in srgb, var(--canvas) var(--card-pct, 90%), transparent);
+   background:color-mix(in srgb, var(--canvas) var(--card-pct, 90%), transparent)}
 .tide-banner:hover{transform:translateY(-1px);box-shadow:var(--sh-sm)}
 :root[data-theme="dark"] .tide-banner{filter:brightness(.55) saturate(.9)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tide-banner{filter:brightness(.55) saturate(.9)}}
@@ -322,7 +322,7 @@ html.has-bg .nav-search input{background:var(--glass-hi)}
 .resize{position:absolute;left:0;right:0;bottom:0;height:9px;cursor:ns-resize;touch-action:none}
 .resize::after{content:"";position:absolute;left:50%;bottom:2px;width:22px;height:3px;border-radius:2px;background:var(--ink-2);opacity:0;transform:translateX(-50%)}
 .evt:hover .resize::after{opacity:.4}
-.ghost{position:absolute;left:0;right:6px;border-radius:var(--r-ctl);background:var(--accent-soft);box-shadow:inset 0 0 0 2px var(--accent);pointer-events:none;z-index:4;font-size:12px;padding:3px 8px;color:var(--accent);font-weight:600}
+.dropghost{position:absolute;left:0;right:6px;border-radius:var(--r-ctl);background:var(--accent-soft);box-shadow:inset 0 0 0 2px var(--accent);pointer-events:none;z-index:4;font-size:12px;padding:3px 8px;color:var(--accent);font-weight:600}
 .nowline{position:absolute;left:0;right:0;height:2px;margin-top:-1px;background:var(--accent);z-index:3;pointer-events:none;box-shadow:0 0 8px color-mix(in srgb,var(--accent) 60%,transparent)}
 .nowline::before{content:"";position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--accent)}
 .nowpill{position:absolute;right:6px;transform:translateY(-50%);background:var(--accent);color:var(--accent-ink);font-size:10.5px;font-weight:600;border-radius:20px;padding:1px 7px;white-space:nowrap;z-index:4;box-shadow:var(--sh-xs)}
@@ -640,7 +640,7 @@ html.has-bg .nav::before{display:none}
 #bgLayer{filter:blur(var(--mica-blur,43px)) saturate(1.6)}
 
 /* rounder controls to match the task cards; small chips stay a touch tighter */
-.pill,.u-n,.evt,.dd-opt,.dd-clear,.kbd,.mcell .it,.step button,.ghost,.tl-allday button,.cm-form button,.pm-l button{border-radius:var(--r-sm)}
+.pill,.u-n,.evt,.dd-opt,.dd-clear,.kbd,.mcell .it,.step button,.dropghost,.tl-allday button,.cm-form button,.pm-l button{border-radius:var(--r-sm)}
 .btn.sm,.sel-pill,.ddf,.pillbtn,.badd input,.nav-search input{border-radius:var(--r-ctl)}
 
 /* task cards: faint border, slightly softer shadows */
@@ -666,7 +666,7 @@ html.has-bg .nav::before{display:none}
 /* calendar sheet: sits on top of the main card, same height, flush with its edges */
 .shell{position:relative}
 .tide{position:absolute;top:8px;bottom:10px;right:10px;margin:0;z-index:5;isolation:isolate;border-radius:var(--r-card);
-  background:color-mix(in srgb,var(--surface) var(--tide-pct,78%),transparent);-webkit-backdrop-filter:blur(28px) saturate(1.3);backdrop-filter:blur(28px) saturate(1.3);
+  background:color-mix(in srgb,var(--surface) var(--tide-pct,78%),transparent);-webkit-backdrop-filter:blur(var(--tide-blur,16px)) saturate(1.3);backdrop-filter:blur(var(--tide-blur,16px)) saturate(1.3);
   box-shadow:-18px 0 44px rgba(34,24,12,.13),var(--sh-lg);
   transition:width .5s var(--ease),transform .5s var(--ease),opacity .3s,visibility 0s}
 .tide.closed{transform:translateX(calc(100% + 24px));opacity:0;visibility:hidden;box-shadow:none;margin:0;transition:width .5s var(--ease),transform .5s var(--ease),opacity .3s,visibility 0s .5s}
@@ -731,6 +731,29 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
 .pomo.mini.locked #pmPlay{opacity:.45;pointer-events:none}
 .modal.pomo-modal.mini{width:270px;height:auto}
 .modal.pomo-modal.mini .pomo{min-height:0}
+
+/* settings with sections */
+.modal.settings{width:min(780px,100%);height:min(580px,92dvh)}
+.modal.settings .m-body{flex:1;min-height:0;padding:0;overflow:hidden}
+.set{display:grid;grid-template-columns:196px 1fr;height:100%}
+.set-nav{display:flex;flex-direction:column;gap:2px;padding:8px 10px;background:var(--surface-2);overflow-y:auto}
+.set-nav button{display:flex;align-items:center;gap:10px;border:0;background:transparent;padding:9px 10px;border-radius:var(--r-ctl);color:var(--ink-2);font-weight:500;text-align:left;position:relative;transition:background .2s,color .2s}
+.set-nav button:hover{background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--ink)}
+.set-nav button.on{background:var(--surface);color:var(--ink);box-shadow:var(--sh-xs)}
+.set-nav button.on::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:2px;background:var(--accent)}
+.set-body{overflow-y:auto;padding:6px 24px 20px;gap:16px}
+.set-body .sec{display:flex;flex-direction:column;gap:16px}
+.set-body .sec:not([hidden]){animation:view-in .28s var(--ease)}
+.set-body h3{margin:6px 0 0;font-size:20px;font-weight:600}
+.set-body h4{margin:0;font-size:14px}
+.set-body h4.sub{margin-top:6px;font-size:15px}
+.mgroup{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:var(--r-card);background:var(--surface-2)}
+.mgroup p{margin:-4px 0 0}
+.srow{display:grid;grid-template-columns:62px 1fr 30px;align-items:center;gap:10px;font-size:13px;color:var(--ink-2)}
+.srow b{color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
+.srow input[type=range]{width:100%;padding:0;background:transparent;box-shadow:none;accent-color:var(--accent)}
+.form label.check,.set-body label.check{flex-direction:row;align-items:center;gap:10px;color:var(--ink);font-weight:500}
+@media (max-width:760px){.set{grid-template-columns:1fr;grid-template-rows:auto 1fr}.set-nav{flex-direction:row;overflow-x:auto}.set-nav button span{white-space:nowrap}.modal.settings{height:min(640px,94dvh)}}
 </style>
 </head>
 <body>
@@ -754,7 +777,7 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
   <div id="reconnect" class="reconnect" hidden>Your Google session expired. <button class="btn sm accent" data-action="reconnect">Reconnect</button></div>
   <div class="shell" id="shell" data-view="horizon" data-mob="tasks">
     <aside class="nav" id="nav">
-      <div class="nav-head"><div class="logo"><i></i><b>Abdu's Plan</b></div><span class="grow"></span><button class="icon-btn" data-action="collapseNav" id="btnCollapse" title="Collapse sidebar"></button></div>
+      <div class="nav-head"><div class="logo"><i></i><b>dayplan</b></div><span class="grow"></span><button class="icon-btn" data-action="collapseNav" id="btnCollapse" title="Collapse sidebar"></button></div>
       <div class="nav-search"><span id="icSearch"></span><input type="text" id="navSearch" placeholder="Search" aria-label="Search" autocomplete="off"></div>
       <div class="nav-items" id="navItems"></div>
       <div class="nav-foot" id="navFoot"></div>
@@ -871,6 +894,7 @@ const ICONS = {
   menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
   grip:'<circle cx="9" cy="7" r="1"/><circle cx="15" cy="7" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="17" r="1"/><circle cx="15" cy="17" r="1"/>',
   undo:'<path d="M9 7L4 12l5 5M4 12h11a5 5 0 010 10h-2"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>',
   lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>',
   bell:'<path d="M6 16v-5a6 6 0 0112 0v5l1.5 2h-15L6 16zM10 21h4"/>',
   music:'<path d="M9 18V6l10-2v12M9 18a3 3 0 11-3-3 3 3 0 013 3zM19 16a3 3 0 11-3-3 3 3 0 013 3z"/>',
@@ -904,7 +928,7 @@ const DEFAULT_PREFS = {
   theme: 'auto', workStart: '09:00', workEnd: '17:00', defaultDuration: 30, weekStart: 1,
   visibleCalendars: null, defaultCalendar: null, reflections: {}, listId: 'all', hint: '',
   tideOpen: true, tideDays: 1, calMode: 'week', navCollapsed: false,
-  filters: { tasks: true, events: true, done: true }, trash: [], timer: null, unschedOpen: false, name: 'Abdu', mica: { window: 55, card: 25, cal: 50 },
+  filters: { tasks: true, events: true, done: true }, trash: [], timer: null, unschedOpen: false, name: 'Abdu', mica: { window: 55, card: 25, cal: 50, windowBlur: 48, cardBlur: 34, calBlur: 40 },
   pomo: { focus: 25, break: 5, sound: true, stats: { date: '', sessions: 0, minutes: 0 } }
 };
 let P = { ...DEFAULT_PREFS };
@@ -915,7 +939,17 @@ function loadPrefs() {
   P.mica = { ...DEFAULT_PREFS.mica, ...(P.mica || {}) };
   if (!Array.isArray(P.trash)) P.trash = [];
 }
-function savePrefs() { if (S.demo) return; try { localStorage.setItem(PREF_KEY, JSON.stringify(P)); } catch (e) { /* storage unavailable */ } }
+const APPEARANCE_KEYS = ['theme', 'mica', 'name', 'navCollapsed', 'tideOpen', 'tideDays', 'unschedOpen', 'pomo', 'calMode', 'weekStart', 'workStart', 'workEnd', 'defaultDuration'];
+function savePrefs() {
+  try {
+    if (S.demo) {   // demo mode only remembers how the app looks, never its (made-up) data
+      const cur = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
+      APPEARANCE_KEYS.forEach(k => { cur[k] = P[k]; });
+      localStorage.setItem(PREF_KEY, JSON.stringify(cur)); return;
+    }
+    localStorage.setItem(PREF_KEY, JSON.stringify(P));
+  } catch (e) { /* storage unavailable */ }
+}
 function applyTheme() { const r = document.documentElement; P.theme === 'auto' ? r.removeAttribute('data-theme') : (r.dataset.theme = P.theme); updateNavTone(); }
 
 /* ======================================================================
@@ -1882,7 +1916,7 @@ function evHTML(it) {
 function dcolHTML(k, dis) {
   const ws = hm2min(P.workStart), we = hm2min(P.workEnd);
   const items = layoutDay(dis.filter(e => !e.allDay && overlapsDay(e, k)), k);
-  return `<div class="dcol" data-day="${k}"><div class="shade" style="top:0;height:calc(var(--hh) * ${ws / 60})"></div><div class="shade" style="top:calc(var(--hh) * ${we / 60});bottom:0"></div>${items.map(evHTML).join('')}<div class="ghost" hidden></div>${k === todayKey() ? '<div class="nowline"></div>' : ''}</div>`;
+  return `<div class="dcol" data-day="${k}"><div class="shade" style="top:0;height:calc(var(--hh) * ${ws / 60})"></div><div class="shade" style="top:calc(var(--hh) * ${we / 60});bottom:0"></div>${items.map(evHTML).join('')}<div class="dropghost" hidden></div>${k === todayKey() ? '<div class="nowline"></div>' : ''}</div>`;
 }
 function timelineHTML(id, days, o) {
   const today = todayKey(), dis = displayEvents(), n = days.length;
@@ -2214,29 +2248,49 @@ function calsModal() {
     foot: `<button class="btn accent" data-action="closeModal">Done</button>`, noFocus: true
   });
 }
-function settingsModal() {
-  const cals = writableCals();
+let SETSEC = 'general';
+function settingsModal(sec) {
+  if (sec) SETSEC = sec;
+  const cals = writableCals(), m = P.mica;
+  const secs = [['general', 'General', 'gear'], ['planning', 'Planning', 'clock'], ['appearance', 'Appearance', 'image'], ['focus', 'Focus timer', 'focus'], ['account', 'Account', 'user']];
+  const sl = (label, key) => `<div class="srow"><span>${label}</span><input type="range" min="0" max="100" value="${m[key]}" data-mica="${key}" aria-label="${label}"><b data-micaval="${key}">${m[key]}</b></div>`;
+  const grp = (title, hint, k, kb) => `<div class="mgroup"><h4>${title}</h4><p class="muted small">${hint}</p>${sl('Strength', k)}${sl('Blur', kb)}</div>`;
+  const sec_ = (k, inner) => `<section class="sec" data-sec="${k}" ${SETSEC === k ? '' : 'hidden'}>${inner}</section>`;
   openModal({
-    title: 'Settings',
-    body: `<form id="setf" class="form">
-      <div class="lab">Your name<input type="text" name="uname" maxlength="30" value="${esc(P.name || '')}" placeholder="Abdu"></div>
-      <div class="row2"><label>Working day starts<input type="time" name="ws" value="${esc(P.workStart)}"></label><label>Working day ends<input type="time" name="we" value="${esc(P.workEnd)}"></label></div>
-      <div class="row2"><div class="lab">Default block length${ddField('dur', [15, 30, 45, 60, 90].map(m => [m, fmtDur(m)]), P.defaultDuration)}</div>
-      <div class="lab">Week starts on${ddField('wk', [[1, 'Monday'], [0, 'Sunday']], P.weekStart)}</div></div>
-      <div class="lab">Calendar for task blocks${ddField('cal', cals.map(c => [c.id, c.name]), blockCal()?.id)}</div>
-      <div class="lab">Theme${ddField('theme', [['auto', 'Match system'], ['light', 'Light'], ['dark', 'Dark']], P.theme)}</div>
-      <div class="lab">Window mica<input type="range" min="0" max="100" value="${P.mica.window}" data-mica="window" aria-label="Window mica"><span class="muted small" style="font-weight:400">How strongly your background shows through behind the menu.</span></div>
-      <div class="lab">Main card mica<input type="range" min="0" max="100" value="${P.mica.card}" data-mica="card" aria-label="Main card mica"></div>
-      <div class="lab">Calendar panel mica<input type="range" min="0" max="100" value="${P.mica.cal}" data-mica="cal" aria-label="Calendar panel mica"><span class="inline"><button type="button" class="btn sm ghost" data-action="resetMica">Reset mica</button></span></div>
-      <div class="lab">Background image<span class="inline"><button type="button" class="btn sm" data-action="pickBg">${ic('image')}Upload image…</button><button type="button" class="btn sm ghost" data-action="clearBg">Remove</button></span><span class="muted small" style="font-weight:400">The sidebar turns into frosted glass over your picture. The image stays in this browser.</span></div>
-      <div class="muted small">Preferences are stored in this browser only.</div></form>`,
-    foot: `<button class="btn" type="button" data-action="closeModal">Cancel</button><button class="btn accent" type="submit" form="setf">Save</button>`,
+    title: 'Settings', cls: 'settings', noFocus: true,
+    body: `<form id="setf" class="set" autocomplete="off">
+      <nav class="set-nav">${secs.map(([k, l, i]) => `<button type="button" class="${k === SETSEC ? 'on' : ''}" data-action="setSec" data-sec="${k}">${ic(i)}<span>${l}</span></button>`).join('')}</nav>
+      <div class="set-body form">
+        ${sec_('general', `<h3>General</h3>
+          <div class="lab">Your name<input type="text" name="uname" maxlength="30" value="${esc(P.name || '')}" placeholder="Abdu"></div>
+          <div class="lab">Theme${ddField('theme', [['auto', 'Match system'], ['light', 'Light'], ['dark', 'Dark']], P.theme)}</div>
+          <div class="lab">Week starts on${ddField('wk', [[1, 'Monday'], [0, 'Sunday']], P.weekStart)}</div>`)}
+        ${sec_('planning', `<h3>Planning</h3>
+          <div class="row2"><label>Working day starts<input type="time" name="ws" value="${esc(P.workStart)}"></label><label>Working day ends<input type="time" name="we" value="${esc(P.workEnd)}"></label></div>
+          <div class="lab">Default block length${ddField('dur', [15, 30, 45, 60, 90].map(x => [x, fmtDur(x)]), P.defaultDuration)}</div>
+          <div class="lab">Calendar for task blocks${ddField('cal', cals.map(c => [c.id, c.name]), blockCal()?.id)}</div>`)}
+        ${sec_('appearance', `<h3>Appearance</h3>
+          <div class="lab">Background image<span class="inline"><button type="button" class="btn sm" data-action="pickBg">${ic('image')}Upload image…</button><button type="button" class="btn sm ghost" data-action="clearBg">Remove</button></span><span class="muted small" style="font-weight:400">The picture shows through the whole window as mica and stays in this browser.</span></div>
+          <h4 class="sub">Mica</h4><p class="muted small" style="margin:-4px 0 0">Strength is how much of the picture shows through. Blur is how frosted it looks. Changes apply instantly.</p>
+          ${grp('Window', 'The picture behind the menu.', 'window', 'windowBlur')}
+          ${grp('Main card', 'The big card with your tasks.', 'card', 'cardBlur')}
+          ${grp('Calendar panel', 'The calendar sheet on the right.', 'cal', 'calBlur')}
+          <div><button type="button" class="btn sm" data-action="resetMica">Reset mica</button></div>`)}
+        ${sec_('focus', `<h3>Focus timer</h3>
+          <div class="row2"><label>Focus length (minutes)<input type="number" name="pf" min="1" max="120" value="${P.pomo.focus}"></label><label>Break length (minutes)<input type="number" name="pb" min="1" max="120" value="${P.pomo.break}"></label></div>
+          <label class="check"><input type="checkbox" name="ps" ${P.pomo.sound ? 'checked' : ''}>Play a chime when time is up</label>`)}
+        ${sec_('account', `<h3>Account</h3>
+          <p class="muted" style="margin:0">${S.demo ? 'You are in demo mode with sample data. Nothing is sent to Google.' : 'Signed in as ' + esc(P.hint || 'your Google account') + '.'}</p>
+          <div class="inline"><button type="button" class="btn" data-action="signOut">${ic('out')}${S.demo ? 'Exit demo' : 'Sign out'}</button><button type="button" class="btn ghost" data-action="openHelp">${ic('help')}Keyboard shortcuts</button></div>`)}
+      </div></form>`,
+    foot: `<button class="btn" type="button" data-action="closeModal">Close</button><button class="btn accent" type="submit" form="setf">Save changes</button>`,
     onMount() {
       $('#setf').onsubmit = e => {
         e.preventDefault();
         const f = new FormData(e.target), wkChanged = P.weekStart !== +f.get('wk') || P.defaultCalendar !== f.get('cal');
-        if (hm2min(f.get('we')) <= hm2min(f.get('ws'))) { toast('Working hours must end after they start.', 'error'); return; }
+        if (hm2min(f.get('we')) <= hm2min(f.get('ws'))) { toast('Working hours must end after they start.', 'error'); SETSEC = 'planning'; $$('.set .sec').forEach(x => { x.hidden = x.dataset.sec !== 'planning'; }); $$('.set-nav button').forEach(b => b.classList.toggle('on', b.dataset.sec === 'planning')); return; }
         P.name = (f.get('uname') || '').trim() || 'Abdu'; P.workStart = f.get('ws'); P.workEnd = f.get('we'); P.defaultDuration = +f.get('dur'); P.weekStart = +f.get('wk'); P.defaultCalendar = f.get('cal'); P.theme = f.get('theme');
+        P.pomo.focus = Math.max(1, Math.min(120, parseInt(f.get('pf')) || 25)); P.pomo.break = Math.max(1, Math.min(120, parseInt(f.get('pb')) || 5)); P.pomo.sound = f.has('ps');
         savePrefs(); applyTheme(); closeModal();
         if (wkChanged) { S.loadedWeeks.clear(); }
         render();
@@ -2567,7 +2621,8 @@ const ACTIONS = {
   nav: a => { const v = a.dataset.view; if (v === 'calendar') expandCalendar(); else if (S.view === 'calendar' && v === 'horizon') collapseCalendar(); else navTo(v); }, collapseNav: () => { P.navCollapsed = !P.navCollapsed; savePrefs(); render(); },
   toggleNav: () => { S.navOpen = !S.navOpen; render(); }, mobTab: a => { S.mob = a.dataset.tab; if (S.mob === 'day') P.tideOpen = true; render(); },
   jumpToday: a => datePicker(a, { value: S.day, align: 'right', onPick: k => goDay(k) }),
-  resetMica: () => { P.mica = { ...DEFAULT_PREFS.mica }; $$('[data-mica]').forEach(r => (r.value = P.mica[r.dataset.mica])); applyMica(); savePrefs(); },
+  resetMica: () => { P.mica = { ...DEFAULT_PREFS.mica }; $$('[data-mica]').forEach(r => { r.value = P.mica[r.dataset.mica]; const o = $(`[data-micaval="${r.dataset.mica}"]`); if (o) o.textContent = r.value; }); applyMica(); savePrefs(); toast('Mica levels reset', 'success', { ttl: 1800 }); },
+  setSec: a => { SETSEC = a.dataset.sec; $$('.set .sec').forEach(x => { x.hidden = x.dataset.sec !== SETSEC; }); $$('.set-nav button').forEach(b => b.classList.toggle('on', b.dataset.sec === SETSEC)); },
   toggleUnsched: a => { const el = a.closest('.bcol.unsched'); if (!el) return; el.classList.toggle('collapsed'); P.unschedOpen = !el.classList.contains('collapsed'); savePrefs(); const tab = $('.u-tab', el); tab && tab.setAttribute('aria-expanded', String(P.unschedOpen)); },
   listDD: a => openDropdown(a, { options: [['all', 'All lists'], ...S.lists.map(l => [l.id, l.title])], value: S.listId, align: 'right', onPick: v => { S.listId = v; P.listId = v; savePrefs(); render(); } }),
   ddField: a => { const options = JSON.parse(a.dataset.opts), input = a.nextElementSibling; openDropdown(a, { options, value: input.value, minWidth: a.offsetWidth, onPick: v => { input.value = v; a.firstElementChild.textContent = options.find(o => String(o[0]) === String(v))[1]; } }); },
@@ -2652,7 +2707,7 @@ document.addEventListener('click', e => {
     if (a.closest('.pop') && !['openFilter'].includes(a.dataset.action)) closePop();
   }
 });
-document.addEventListener('input', e => { const r = e.target.closest && e.target.closest('[data-mica]'); if (r) { P.mica[r.dataset.mica] = +r.value; applyMica(); } });
+document.addEventListener('input', e => { const r = e.target.closest && e.target.closest('[data-mica]'); if (r) { P.mica[r.dataset.mica] = +r.value; applyMica(); const o = $(`[data-micaval="${r.dataset.mica}"]`); if (o) o.textContent = r.value; } });
 document.addEventListener('change', e => { const r = e.target.closest && e.target.closest('[data-mica]'); if (r) savePrefs(); });
 document.addEventListener('change', e => {
   const t = e.target;
@@ -2740,7 +2795,7 @@ document.addEventListener('dragstart', e => {
 function clearDrag() {
   S.dragKey = null; S.dragSub = null;
   $$('.dtask.dragging').forEach(x => x.classList.remove('dragging'));
-  $$('.ghost').forEach(g => (g.hidden = true));
+  $$('.dropghost').forEach(g => (g.hidden = true));
   $$('.drop').forEach(x => x.classList.remove('drop')); $$('.subrow.over').forEach(x => x.classList.remove('over'));
 }
 document.addEventListener('dragend', clearDrag);
@@ -2755,10 +2810,10 @@ document.addEventListener('dragover', e => {
   if (!S.dragKey) return;
   const col = tg.closest('.dcol'), bcol = tg.closest('.bcol'), ni = tg.closest('[data-drop]'), mc = tg.closest('.mcell');
   $$('.drop').forEach(x => x.classList.remove('drop'));
-  $$('.ghost').forEach(g => (g.hidden = true));
+  $$('.dropghost').forEach(g => (g.hidden = true));
   if (col) {
     e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
-    const t = taskByKey(S.dragKey), dur = t ? (t.est || P.defaultDuration) : P.defaultDuration, m = dropMinutes(e, col, dur), g = $('.ghost', col);
+    const t = taskByKey(S.dragKey), dur = t ? (t.est || P.defaultDuration) : P.defaultDuration, m = dropMinutes(e, col, dur), g = $('.dropghost', col);
     g.hidden = false; g.style.top = `calc(var(--hh) * ${m / 60})`; g.style.height = `calc(var(--hh) * ${dur / 60} - 2px)`; g.textContent = `${fmtTime(dateAt(col.dataset.day, m))} · ${fmtDur(dur)}`;
   } else if (bcol) { e.preventDefault(); bcol.classList.add('drop'); }
   else if (ni) { e.preventDefault(); ni.classList.add('drop'); }
@@ -2874,11 +2929,11 @@ let bgUrl = null, bgBlob = null, bgProbe = null;
 function applyMica() {
   const m = P.mica, r = document.documentElement.style;
   r.setProperty('--mica-a', (0.9 - 0.65 * m.window / 100).toFixed(3));
-  r.setProperty('--mica-blur', Math.round(60 - 30 * m.window / 100) + 'px');
+  r.setProperty('--mica-blur', Math.round(m.windowBlur * 0.9) + 'px');
   r.setProperty('--card-pct', (100 - 40 * m.card / 100).toFixed(1) + '%');
-  r.setProperty('--card-blur', Math.round(20 + 30 * m.card / 100) + 'px');
+  r.setProperty('--card-blur', Math.round(m.cardBlur * 0.8) + 'px');
   r.setProperty('--tide-a', (0.88 - 0.5 * m.cal / 100).toFixed(3));
-  r.setProperty('--tide-blur', Math.round(28 - 24 * m.cal / 100) + 'px');
+  r.setProperty('--tide-blur', Math.round(m.calBlur * 0.4) + 'px');
   r.setProperty('--tide-pct', (100 - 45 * m.cal / 100).toFixed(1) + '%');
   updateNavTone();
 }
