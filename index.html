@@ -752,6 +752,11 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
 .srow input[type=range]{width:100%;padding:0;background:transparent;box-shadow:none;accent-color:var(--accent)}
 .form label.check,.set-body label.check{flex-direction:row;align-items:center;gap:10px;color:var(--ink);font-weight:500}
 @media (max-width:760px){.set{grid-template-columns:1fr;grid-template-rows:auto 1fr}.set-nav{flex-direction:row;overflow-x:auto}.set-nav button span{white-space:nowrap}.modal.settings{height:min(640px,94dvh)}}
+
+.auth-help{margin-top:14px;text-align:left;font-size:12.5px;color:var(--ink-2)}
+.auth-help summary{cursor:pointer;color:var(--ink-2)}
+.auth-help p{margin:8px 0}
+.auth-help code{background:var(--surface-2);padding:2px 6px;border-radius:var(--r-sm);word-break:break-all;font-size:12px;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -764,8 +769,14 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
     <h1>Plan your day</h1>
     <p>On top of your Google Calendar and Google Tasks.</p>
     <button class="btn accent" id="signInBtn" data-action="signIn">Continue with Google</button>
-    <button class="btn" id="demoBtn" data-action="startDemo" style="margin-top:10px">Try with sample data</button>
+    <button class="btn" id="redirBtn" data-action="signInRedirect" style="margin-top:10px" title="Signs in inside this window, without a popup">Sign in in this window</button>
+    <button class="btn ghost" id="demoBtn" data-action="startDemo" style="margin-top:6px">Try with sample data</button>
     <p class="small muted" style="margin:10px 0 0">The demo needs no sign-in. Nothing is sent to Google.</p>
+    <details class="auth-help"><summary>Using a desktop app wrapper, or the sign-in page stays blank?</summary>
+      <p>Wrappers such as Pake can’t pass Google’s popup back to the app. Use <b>Sign in in this window</b> instead. It needs this exact address added under <b>Authorized redirect URIs</b> for your OAuth client in Google Cloud:</p>
+      <p><code id="redirUri"></code> <button class="btn sm" id="copyRedir" type="button">Copy</button></p>
+      <p>In Pake, keep Google’s pages inside the app by building with <code>--safe-domain accounts.google.com</code> (or <code>--force-internal-navigation</code>).</p>
+      <p>Stuck on an old or blank state? <button class="btn sm danger" type="button" data-action="resetApp">Reset app data</button></p></details>
     <div id="authNote"></div>
   </div>
 </div>
@@ -926,7 +937,7 @@ const DEFAULT_PREFS = {
   theme: 'auto', workStart: '09:00', workEnd: '17:00', defaultDuration: 30, weekStart: 1,
   visibleCalendars: null, defaultCalendar: null, reflections: {}, listId: 'all', hint: '',
   tideOpen: true, tideDays: 1, calMode: 'week', navCollapsed: false,
-  filters: { tasks: true, events: true, done: true }, trash: [], timer: null, unschedOpen: false, name: 'Abdu', mica: { window: 55, card: 25, cal: 50, windowBlur: 48, cardBlur: 34, calBlur: 40 },
+  filters: { tasks: true, events: true, done: true }, trash: [], timer: null, unschedOpen: false, authMode: '', name: 'Abdu', mica: { window: 55, card: 25, cal: 50, windowBlur: 48, cardBlur: 34, calBlur: 40 },
   pomo: { focus: 25, break: 5, sound: true, stats: { date: '', sessions: 0, minutes: 0 } }
 };
 let P = { ...DEFAULT_PREFS };
@@ -991,11 +1002,60 @@ function clearSession() { try { localStorage.removeItem(SESS_KEY); } catch (e) {
 let tokenClient = null, tokenWaiter = null, refreshTimer = null;
 class ApiError extends Error { constructor(msg, status, reason) { super(msg); this.status = status; this.reason = reason; } }
 
+/* Redirect sign-in: Google's page opens in THIS window and sends the token back in the address. It needs no popup,
+   so it also works inside desktop wrappers (Pake, Tauri, Electron) where Google's popup can't talk back to the app. */
+const OAUTH_STATE = 'dayplan.oauth.state';
+const WRAPPED = !!(window.__TAURI__ || window.__TAURI_INTERNALS__ || window.__TAURI_METADATA__ || window.electron || /\b(Tauri|Electron)\//i.test(navigator.userAgent));
+const useRedirect = () => P.authMode === 'redirect' || WRAPPED;
+const redirectUri = () => location.origin + location.pathname;
+function navigateTo(url) { if (window.__navSpy) return window.__navSpy(url); location.assign(url); }
+function buildAuthUrl(prompt) {
+  const state = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now();
+  try { localStorage.setItem(OAUTH_STATE, state); } catch (e) {}
+  const q = new URLSearchParams({ client_id: CLIENT_ID, redirect_uri: redirectUri(), response_type: 'token', scope: SCOPES.join(' '), include_granted_scopes: 'true', state });
+  if (prompt) q.set('prompt', prompt);
+  if (P.hint) q.set('login_hint', P.hint);
+  return 'https://accounts.google.com/o/oauth2/v2/auth?' + q.toString();
+}
+function redirectSignIn(prompt) {
+  try { localStorage.setItem('dayplan.leaving', JSON.stringify({ t: Date.now(), silent: prompt === 'none' })); } catch (e) {}   // lets us notice if Google never sends us back
+  navigateTo(buildAuthUrl(prompt));
+}
+function hardReload() { if (window.__navSpy) return window.__navSpy('reload'); location.replace(location.pathname); }
+/* Wipes everything Dayplan stored in this window: settings, saved sign-in, background picture, local Trash, journal. */
+async function resetAppData(skipConfirm) {
+  if (!skipConfirm && !confirm('Reset Dayplan on this device?\n\nThis clears your settings, saved sign-in, background picture, journal and local Trash. Your Google Tasks and Calendar are not touched.')) return;
+  try { if (S.token && !S.demo && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(S.token, () => {}); } catch (e) {}
+  try { localStorage.clear(); sessionStorage.clear(); } catch (e) {}
+  try {
+    const dbs = indexedDB.databases ? await indexedDB.databases() : [{ name: 'dayplan' }];
+    await Promise.all(dbs.map(d => new Promise(res => { const r = indexedDB.deleteDatabase(d.name); r.onsuccess = r.onerror = r.onblocked = () => res(); })));
+  } catch (e) {}
+  try { if (window.caches) (await caches.keys()).forEach(k => caches.delete(k)); } catch (e) {}
+  try { document.cookie.split(';').forEach(c => { document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date(0).toUTCString() + ';path=/'); }); } catch (e) {}
+  hardReload();
+}
+function bounceAllowed() {   // one automatic silent re-login attempt per 45 s, so a failure can never loop
+  try { const t = +sessionStorage.getItem('dayplan.bounce') || 0; if (Date.now() - t < 45000) return false; sessionStorage.setItem('dayplan.bounce', String(Date.now())); return true; } catch (e) { return false; }
+}
+function consumeOAuthReturn() {
+  const h = new URLSearchParams(location.hash.replace(/^#/, '')), q = new URLSearchParams(location.search), get = k => h.get(k) || q.get(k);
+  if (!get('access_token') && !get('error')) return null;
+  let saved = null; try { saved = localStorage.getItem(OAUTH_STATE); localStorage.removeItem(OAUTH_STATE); } catch (e) {}
+  try { history.replaceState(null, '', location.pathname); } catch (e) {}   // keep the token out of the address bar
+  if (!get('state') || get('state') !== saved) return { error: 'state_mismatch' };
+  if (get('error')) return { error: get('error') };
+  if (!SCOPES.every(sc => (get('scope') || '').split(' ').includes(sc))) return { error: 'missing_scopes' };
+  const secs = Number(get('expires_in')) || 3600;
+  S.token = get('access_token'); S.tokenExp = Date.now() + (secs - 90) * 1000;
+  scheduleRefresh(secs); saveSession();
+  return { ok: true };
+}
 function whenGIS(cb) {
   let n = 0;
   const t = setInterval(() => {
     if (window.google && google.accounts && google.accounts.oauth2) { clearInterval(t); cb(); }
-    else if (++n > 100) { clearInterval(t); if (S.demo || S.loaded) return; $('#app').hidden = true; $('#auth').hidden = false; authNote('Couldn’t load Google sign-in. Check your connection or any blocker for accounts.google.com, then reload.', true); }
+    else if (++n > 100) { clearInterval(t); if (S.demo || S.loaded || useRedirect()) return; $('#app').hidden = true; $('#auth').hidden = false; authNote('Couldn’t load Google sign-in. Check your connection or any blocker for accounts.google.com, then reload.', true); }
   }, 100);
 }
 function authNote(msg, bad) { $('#authNote').innerHTML = msg ? `<p class="auth-note ${bad ? 'bad' : ''}">${msg}</p>` : ''; }
@@ -1022,6 +1082,7 @@ function requestToken(prompt) {
   return promise;
 }
 function silentRefresh() {
+  if (useRedirect()) return Promise.reject({ error: 'redirect_mode' });   // no popups here; the Reconnect bar handles it
   return Promise.race([requestToken('none'), new Promise((_, rej) => setTimeout(() => { tokenWaiter = null; rej({ error: 'timeout' }); }, 15000))]);
 }
 function scheduleRefresh(expiresIn) {
@@ -1036,17 +1097,22 @@ function authErrorMessage(err) {
   const k = err && (err.type || err.error);
   if (k === 'popup_closed') return 'Sign-in was cancelled.';
   if (k === 'popup_failed_to_open') return 'Your browser blocked the sign-in popup. Allow popups for this page and try again.';
+  if (k === 'state_mismatch') return 'Sign-in couldn’t be verified. Please try again.';
+  if (k === 'redirect_mode') return 'Please reconnect.';
   if (k === 'access_denied') return 'Access denied. Make sure your Google account is a test user, and approve all permissions.';
   if (k === 'missing_scopes') return 'Dayplan needs all requested permissions (Calendar and Tasks). Sign in again and keep every box ticked.';
   if (k === 'invalid_client' || k === 'idpiframe_initialization_failed') return 'Google rejected the Client ID. Check CLIENT_ID and the authorized JavaScript origin.';
   return 'Sign-in failed' + (k ? ` (${k})` : '') + '.';
 }
 async function signIn() {
-  if (!tokenClient) return;
-  try { await requestToken(''); await onSignedIn(); }
-  catch (e) { const m = authErrorMessage(e); authNote(esc(m), e && e.error !== 'popup_closed'); toast(m, 'error'); }
+  if (useRedirect()) { redirectSignIn(); return; }
+  if (!tokenClient) { authNote('Google sign-in is still loading. Try again in a second, or use <b>Sign in in this window</b>.', true); return; }
+  const watchdog = setTimeout(() => authNote('Nothing happening? Your window may not support Google’s popup. Try <b>Sign in in this window</b> below.', true), 20000);
+  try { await requestToken(''); clearTimeout(watchdog); await onSignedIn(); }
+  catch (e) { clearTimeout(watchdog); const m = authErrorMessage(e); authNote(esc(m), e && e.error !== 'popup_closed'); toast(m, 'error'); }
 }
 async function reconnect() {
+  if (useRedirect()) { redirectSignIn(); return; }
   try { await requestToken(''); if (S.loaded) { toast('Reconnected', 'success'); refreshAll(true); } else await onSignedIn(); }
   catch (e) { toast(authErrorMessage(e), 'error'); }
 }
@@ -2279,7 +2345,9 @@ function settingsModal(sec) {
           <label class="check"><input type="checkbox" name="ps" ${P.pomo.sound ? 'checked' : ''}>Play a chime when time is up</label>`)}
         ${sec_('account', `<h3>Account</h3>
           <p class="muted" style="margin:0">${S.demo ? 'You are in demo mode with sample data. Nothing is sent to Google.' : 'Signed in as ' + esc(P.hint || 'your Google account') + '.'}</p>
-          <div class="inline"><button type="button" class="btn" data-action="signOut">${ic('out')}${S.demo ? 'Exit demo' : 'Sign out'}</button><button type="button" class="btn ghost" data-action="openHelp">${ic('help')}Keyboard shortcuts</button></div>`)}
+          <div class="inline"><button type="button" class="btn" data-action="signOut">${ic('out')}${S.demo ? 'Exit demo' : 'Sign out'}</button><button type="button" class="btn ghost" data-action="openHelp">${ic('help')}Keyboard shortcuts</button></div>
+          <h4 class="sub">Reset</h4><p class="muted small" style="margin:-4px 0 0">Clears settings, saved sign-in, background picture, journal and local Trash on this device. Your Google data is not touched.</p>
+          <div><button type="button" class="btn danger" data-action="resetApp">Reset app data</button></div>`)}
       </div></form>`,
     foot: `<button class="btn" type="button" data-action="closeModal">Close</button><button class="btn accent" type="submit" form="setf">Save changes</button>`,
     onMount() {
@@ -2616,7 +2684,7 @@ function focusAdd() {
    ====================================================================== */
 const taskFromEl = el => { const k = el.closest('[data-key]')?.dataset.key; return k ? taskByKey(k) : null; };
 const ACTIONS = {
-  signIn: () => signIn(), signOut: () => signOut(), startDemo: () => startDemo(), exitDemo: () => exitDemo(), reconnect: () => reconnect(),
+  resetApp: () => resetAppData(), signIn: () => signIn(), signInRedirect: () => redirectSignIn(), signOut: () => signOut(), startDemo: () => startDemo(), exitDemo: () => exitDemo(), reconnect: () => reconnect(),
   nav: a => { const v = a.dataset.view; if (v === 'calendar') expandCalendar(); else if (S.view === 'calendar' && v === 'horizon') collapseCalendar(); else navTo(v); }, collapseNav: () => { P.navCollapsed = !P.navCollapsed; savePrefs(); render(); },
   toggleNav: () => { S.navOpen = !S.navOpen; render(); }, mobTab: a => { S.mob = a.dataset.tab; if (S.mob === 'day') P.tideOpen = true; render(); },
   jumpToday: a => datePicker(a, { value: S.day, align: 'right', onPick: k => goDay(k) }),
@@ -3030,9 +3098,14 @@ function boot() {
   applyMica(); applyBg();
   $('#bgFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) setBgFile(f); });
   S.listId = P.listId || 'all';
+  if (/[?&]reset(=|&|$)/.test(location.search)) { resetAppData(true); return; }   // dayplan.html?reset=1 wipes everything
   const bad = !CLIENT_ID || CLIENT_ID.startsWith('PASTE_');
-  const returning = !!P.hint || !!loadSession();
+  let left = null; try { left = JSON.parse(localStorage.getItem('dayplan.leaving') || 'null'); localStorage.removeItem('dayplan.leaving'); } catch (e) {}
+  const oauth = consumeOAuthReturn(); if (oauth) left = null;   // are we coming back from Google's sign-in page?
+  const returning = !!(oauth && oauth.ok) || !!P.hint || !!loadSession();
   if (!returning || bad || location.protocol === 'file:') $('#auth').hidden = false; else showShell();
+  const ru = $('#redirUri'); if (ru) ru.textContent = redirectUri();
+  const cp = $('#copyRedir'); if (cp) cp.addEventListener('click', () => { try { navigator.clipboard.writeText(redirectUri()); toast('Copied', 'success', { ttl: 1500 }); } catch (e) {} });
   if (location.protocol === 'file:') authNote('This page is open from a <b>file://</b> address. Google sign-in needs http(s). Run <code>py -m http.server 8000</code> in this folder and open <code>http://localhost:8000</code>, or host it on GitHub Pages. You can still try the demo below.', true);
   else if (bad) authNote('Set <b>CLIENT_ID</b> at the top of this file first (see the README comment), or try the demo below.', true);
   const tickers = () => {
@@ -3041,13 +3114,26 @@ function boot() {
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.token && !modalOpen()) refreshAll(false); });
   };
   tickers();
-  if (bad || location.protocol === 'file:') { $('#signInBtn').disabled = true; return; }
+  if (bad || location.protocol === 'file:') { $('#signInBtn').disabled = true; $('#redirBtn').disabled = true; return; }
   if (P.hint) $('#signInBtn').textContent = 'Continue as ' + P.hint;
+  if (oauth && oauth.ok) { P.authMode = 'redirect'; savePrefs(); onSignedIn(); return; }   // remembered: this window can't use popups
+  if (oauth && oauth.error && !/^(login_required|interaction_required|consent_required|account_selection_required)$/.test(oauth.error)) {
+    $('#app').hidden = true; $('#auth').hidden = false; authNote(esc(authErrorMessage({ error: oauth.error })), true);
+  }
+  const sess = loadSession();
+  if (left && !sess) {   // we left for Google's page last time and never came back: don't send the user there again automatically
+    $('#app').hidden = true; $('#auth').hidden = false;
+    if (!left.silent) authNote('Last time, Google’s sign-in page never returned to this app. If it stays blank in this window, open the page in Chrome or Edge and install it as an app (browser menu → Install), or use the demo. <b>Reset app data</b> below clears any stuck state.', true);
+  }
+  if (sess) { S.token = sess.t; S.tokenExp = sess.exp; scheduleRefresh((sess.exp - Date.now()) / 1000 + 90); onSignedIn(); }
+  else if (left) { /* handled above */ }
+  else if (P.hint && useRedirect()) {   // returning user, expired token: quietly bounce through Google and straight back
+    if (bounceAllowed()) { redirectSignIn('none'); return; }
+    $('#app').hidden = true; $('#auth').hidden = false;
+  }
   whenGIS(async () => {
     initAuth();
-    const sess = loadSession();
-    if (sess) { S.token = sess.t; S.tokenExp = sess.exp; scheduleRefresh((sess.exp - Date.now()) / 1000 + 90); await onSignedIn(); return; }
-    if (P.hint) {
+    if (!sess && P.hint && !useRedirect()) {
       try { await silentRefresh(); await onSignedIn(); }
       catch (e) { $('#reconnect').hidden = false; armGesture(); }
     }
