@@ -47,6 +47,8 @@ in the task's notes as marker lines — visible in the Google Tasks app too):
 /* ============================ CONFIG ============================ */
 /* >>> PASTE YOUR GOOGLE OAUTH WEB CLIENT ID HERE <<< */
 const CLIENT_ID = '543786567363-6ai16d6s4vmmvdtp8v6vdteod9039kmu.apps.googleusercontent.com';
+/* Desktop-app sign-in hand-off (see "Sign in with your browser"). Only an AES-encrypted token passes through this free relay. */
+const RELAY = 'https://ntfy.sh';
 /* ================================================================ */
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -757,6 +759,13 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
 .auth-help summary{cursor:pointer;color:var(--ink-2)}
 .auth-help p{margin:8px 0}
 .auth-help code{background:var(--surface-2);padding:2px 6px;border-radius:var(--r-sm);word-break:break-all;font-size:12px;color:var(--ink)}
+
+.bw{text-align:left;margin-top:16px;padding:12px 14px;border-radius:var(--r-card);background:var(--surface-2);font-size:13px}
+.bw p{margin:8px 0}
+.bw-row{display:flex;align-items:center;gap:10px}
+.bw-link{display:flex;gap:6px}.bw-link input{font-size:12px;padding:7px 10px}
+.spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--accent-soft);border-top-color:var(--accent);animation:spin .8s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -769,15 +778,15 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
     <h1>Plan your day</h1>
     <p>On top of your Google Calendar and Google Tasks.</p>
     <button class="btn accent" id="signInBtn" data-action="signIn">Continue with Google</button>
-    <button class="btn" id="redirBtn" data-action="signInRedirect" style="margin-top:10px" title="Signs in inside this window, without a popup">Sign in in this window</button>
+    <button class="btn" id="browserBtn" data-action="signInBrowser" style="margin-top:10px" title="Opens Google sign-in in your normal browser, then connects this app">Sign in with your browser</button>
     <button class="btn ghost" id="demoBtn" data-action="startDemo" style="margin-top:6px">Try with sample data</button>
     <p class="small muted" style="margin:10px 0 0">The demo needs no sign-in. Nothing is sent to Google.</p>
-    <details class="auth-help"><summary>Using a desktop app wrapper, or the sign-in page stays blank?</summary>
-      <p>Wrappers such as Pake can’t pass Google’s popup back to the app. Use <b>Sign in in this window</b> instead. It needs this exact address added under <b>Authorized redirect URIs</b> for your OAuth client in Google Cloud:</p>
-      <p><code id="redirUri"></code> <button class="btn sm" id="copyRedir" type="button">Copy</button></p>
-      <p>In Pake, keep Google’s pages inside the app by building with <code>--safe-domain accounts.google.com</code> (or <code>--force-internal-navigation</code>).</p>
+    <details class="auth-help"><summary>Using a desktop app wrapper (Pake) or the sign-in page stays blank?</summary>
+      <p>Wrappers can’t show Google’s popup. Use <b>Sign in with your browser</b>: it opens Google sign-in in your normal browser, and this app connects by itself once you finish there.</p>
+      <p>Prefer to stay inside this window? <button class="btn sm" id="redirBtn" type="button" data-action="signInRedirect">Sign in in this window</button> It needs this exact address under <b>Authorized redirect URIs</b> in Google Cloud: <code id="redirUri"></code> <button class="btn sm" id="copyRedir" type="button">Copy</button></p>
       <p>Stuck on an old or blank state? <button class="btn sm danger" type="button" data-action="resetApp">Reset app data</button></p></details>
     <div id="authNote"></div>
+    <div id="bwBox"></div>
   </div>
 </div>
 
@@ -1006,7 +1015,8 @@ class ApiError extends Error { constructor(msg, status, reason) { super(msg); th
    so it also works inside desktop wrappers (Pake, Tauri, Electron) where Google's popup can't talk back to the app. */
 const OAUTH_STATE = 'dayplan.oauth.state';
 const WRAPPED = !!(window.__TAURI__ || window.__TAURI_INTERNALS__ || window.__TAURI_METADATA__ || window.electron || /\b(Tauri|Electron)\//i.test(navigator.userAgent));
-const useRedirect = () => P.authMode === 'redirect' || WRAPPED;
+const authKind = () => (P.authMode === 'redirect' ? 'redirect' : (P.authMode === 'browser' || WRAPPED) ? 'browser' : 'popup');
+const noPopup = () => authKind() !== 'popup';
 const redirectUri = () => location.origin + location.pathname;
 function navigateTo(url) { if (window.__navSpy) return window.__navSpy(url); location.assign(url); }
 function buildAuthUrl(prompt) {
@@ -1025,6 +1035,7 @@ function hardReload() { if (window.__navSpy) return window.__navSpy('reload'); l
 /* Wipes everything Dayplan stored in this window: settings, saved sign-in, background picture, local Trash, journal. */
 async function resetAppData(skipConfirm) {
   if (!skipConfirm && !confirm('Reset Dayplan on this device?\n\nThis clears your settings, saved sign-in, background picture, journal and local Trash. Your Google Tasks and Calendar are not touched.')) return;
+  try { stopBW(); } catch (e) {}
   try { if (S.token && !S.demo && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(S.token, () => {}); } catch (e) {}
   try { localStorage.clear(); sessionStorage.clear(); } catch (e) {}
   try {
@@ -1051,11 +1062,105 @@ function consumeOAuthReturn() {
   scheduleRefresh(secs); saveSession();
   return { ok: true };
 }
+/* ---------- Sign in with your normal browser (for desktop wrappers where Google's own page can't render) ----------
+   The app opens a link in your browser. You sign in there with Google. The browser page encrypts the token with a
+   one-time key that only travels in the link's #fragment, and drops it in a random mailbox on a free relay (ntfy.sh).
+   The app is listening on that mailbox, decrypts the token, and signs in. The relay only ever sees ciphertext. */
+const b64u = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = str => Uint8Array.from(atob(str.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+let BW = null, LINK = null;
+async function openExternal(url) {
+  const T = window.__TAURI__, I = window.__TAURI_INTERNALS__;
+  try { if (T && T.shell && T.shell.open) { await T.shell.open(url); return true; } } catch (e) {}
+  try { if (T && T.opener && T.opener.openUrl) { await T.opener.openUrl(url); return true; } } catch (e) {}
+  try { if (I && I.invoke) { await I.invoke('plugin:opener|open_url', { url }); return true; } } catch (e) {}
+  try { if (I && I.invoke) { await I.invoke('plugin:shell|open', { path: url }); return true; } } catch (e) {}
+  try { const w = window.open(url, '_blank', 'noopener'); if (w) return true; } catch (e) {}
+  return false;
+}
+function bwHTML() {
+  return `<div class="bw"><div class="bw-row"><span class="spin"></span><b>Waiting for you to sign in…</b></div>
+    <p>Your browser should have opened a Dayplan page. Sign in with Google there. This window connects by itself when you finish.</p>
+    <div class="bw-link"><input type="text" readonly id="bwUrl" value="${esc(BW ? BW.url : '')}" aria-label="Sign-in link"><button class="btn sm" type="button" data-action="bwCopy">Copy link</button></div>
+    <p class="small muted">Nothing opened, or it opened inside this app? Copy the link and paste it into your browser.</p>
+    <div class="inline"><button class="btn sm" type="button" data-action="bwOpen">Open again</button><button class="btn sm ghost" type="button" data-action="bwCancel">Cancel</button></div></div>`;
+}
+function renderBW() {
+  if (!BW) return;
+  if (!$('#auth').hidden) { $('#bwBox').innerHTML = bwHTML(); }
+  else openModal({ title: 'Sign in with your browser', body: bwHTML(), noFocus: true, onClose() { if (BW && !BW.done) stopBW(true); } });
+}
+function stopBW(fromModal) {
+  if (BW) { try { BW.es.close(); } catch (e) {} clearTimeout(BW.timer); BW = null; }
+  const box = $('#bwBox'); if (box) box.innerHTML = '';
+  if (!fromModal && MODAL) closeModal(true, true);
+}
+async function browserSignIn() {
+  stopBW();
+  if (!(window.crypto && crypto.subtle && window.EventSource)) { authNote('This window can’t do browser sign-in. Open the page in Chrome or Edge instead.', true); return; }
+  const raw = crypto.getRandomValues(new Uint8Array(32)), topic = 'dayplan-' + b64u(crypto.getRandomValues(new Uint8Array(16)));
+  const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
+  const url = location.origin + location.pathname + '?link=' + topic + (P.hint ? '&hint=' + encodeURIComponent(P.hint) : '') + '#k=' + b64u(raw);
+  const es = new EventSource(`${RELAY}/${topic}/sse?since=all`);
+  BW = { topic, url, es, done: false };
+  es.onmessage = async ev => {
+    try {
+      const d = JSON.parse(ev.data); if (d.event !== 'message' || !d.message) return;
+      const bytes = unb64u(String(d.message).trim());
+      const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes.slice(0, 12) }, key, bytes.slice(12));
+      const o = JSON.parse(new TextDecoder().decode(pt));
+      if (o && o.t && o.exp > Date.now() + 60000) await onBrowserToken(o);
+    } catch (e) { /* not meant for us, or tampered with: ignore */ }
+  };
+  BW.timer = setTimeout(() => { if (BW && !BW.done) { stopBW(); authNote('Timed out waiting for the browser. Please try again.', true); } }, 5 * 60 * 1000);
+  authNote(''); renderBW();
+  await openExternal(url);
+}
+async function onBrowserToken(o) {
+  if (!BW || BW.done) return;
+  BW.done = true;
+  S.token = o.t; S.tokenExp = o.exp; P.authMode = 'browser'; savePrefs(); saveSession();
+  scheduleRefresh((S.tokenExp - Date.now()) / 1000 + 90);
+  stopBW(); authNote(''); $('#reconnect').hidden = true;
+  try { const T = window.__TAURI__; const w = T && ((T.window && (T.window.getCurrentWindow ? T.window.getCurrentWindow() : T.window.getCurrent && T.window.getCurrent()))); if (w && w.setFocus) w.setFocus(); window.focus(); } catch (e) {}
+  if (!S.loaded) await onSignedIn(); else { toast('Reconnected', 'success'); refreshAll(true); }
+}
+/* the page the browser shows: sign in, then hand the (encrypted) token to the waiting app */
+function linkParams() {
+  const q = new URLSearchParams(location.search), m = location.hash.match(/k=([A-Za-z0-9_-]+)/), topic = q.get('link');
+  return topic && /^dayplan-[A-Za-z0-9_-]{10,}$/.test(topic) && m ? { topic, key: m[1], hint: q.get('hint') || '' } : null;
+}
+function runLinkPage(L) {
+  LINK = L; try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  $('#app').hidden = true; $('#auth').hidden = false;
+  $('.auth-card h1').textContent = 'Connect Dayplan';
+  $('.auth-card > p').textContent = 'Sign in with Google here, then go back to the Dayplan app. It connects automatically.';
+  ['#browserBtn', '#demoBtn', '.auth-help'].forEach(x => { const e = $(x); if (e) e.hidden = true; });
+  $$('.auth-card p.small').forEach(e => (e.hidden = true));
+  const btn = $('#signInBtn'); btn.textContent = 'Continue with Google'; btn.dataset.action = 'linkSignIn';
+  whenGIS(async () => {
+    initAuth();
+    if (L.hint) { try { await Promise.race([requestToken('none'), new Promise((_, r) => setTimeout(() => { tokenWaiter = null; r(new Error('timeout')); }, 6000))]); await publishLink(); } catch (e) { /* needs a click */ } }
+  });
+}
+async function linkSignIn() {
+  try { await requestToken(''); await publishLink(); }
+  catch (e) { const m = authErrorMessage(e); authNote(esc(m), e && e.error !== 'popup_closed'); }
+}
+async function publishLink() {
+  const key = await crypto.subtle.importKey('raw', unb64u(LINK.key), 'AES-GCM', false, ['encrypt']), iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify({ t: S.token, exp: S.tokenExp }))));
+  const msg = new Uint8Array(iv.length + ct.length); msg.set(iv); msg.set(ct, iv.length);
+  const r = await fetch(`${RELAY}/${LINK.topic}`, { method: 'POST', body: b64u(msg) });
+  if (!r.ok) throw new Error('relay ' + r.status);
+  $('.auth-card').innerHTML = '<div class="logo" style="justify-content:center;font-size:22px"><i style="width:11px;height:11px"></i><b>dayplan</b></div><h1>You’re connected</h1><p>Go back to the Dayplan app. You can close this tab.</p>';
+  try { window.close(); } catch (e) {}
+}
 function whenGIS(cb) {
   let n = 0;
   const t = setInterval(() => {
     if (window.google && google.accounts && google.accounts.oauth2) { clearInterval(t); cb(); }
-    else if (++n > 100) { clearInterval(t); if (S.demo || S.loaded || useRedirect()) return; $('#app').hidden = true; $('#auth').hidden = false; authNote('Couldn’t load Google sign-in. Check your connection or any blocker for accounts.google.com, then reload.', true); }
+    else if (++n > 100) { clearInterval(t); if (S.demo || S.loaded || noPopup()) return; $('#app').hidden = true; $('#auth').hidden = false; authNote('Couldn’t load Google sign-in. Check your connection or any blocker for accounts.google.com, then reload.', true); }
   }, 100);
 }
 function authNote(msg, bad) { $('#authNote').innerHTML = msg ? `<p class="auth-note ${bad ? 'bad' : ''}">${msg}</p>` : ''; }
@@ -1082,7 +1187,7 @@ function requestToken(prompt) {
   return promise;
 }
 function silentRefresh() {
-  if (useRedirect()) return Promise.reject({ error: 'redirect_mode' });   // no popups here; the Reconnect bar handles it
+  if (noPopup()) return Promise.reject({ error: 'redirect_mode' });   // no popups here; the Reconnect bar handles it
   return Promise.race([requestToken('none'), new Promise((_, rej) => setTimeout(() => { tokenWaiter = null; rej({ error: 'timeout' }); }, 15000))]);
 }
 function scheduleRefresh(expiresIn) {
@@ -1105,14 +1210,16 @@ function authErrorMessage(err) {
   return 'Sign-in failed' + (k ? ` (${k})` : '') + '.';
 }
 async function signIn() {
-  if (useRedirect()) { redirectSignIn(); return; }
+  if (authKind() === 'redirect') { redirectSignIn(); return; }
+  if (authKind() === 'browser') { browserSignIn(); return; }
   if (!tokenClient) { authNote('Google sign-in is still loading. Try again in a second, or use <b>Sign in in this window</b>.', true); return; }
   const watchdog = setTimeout(() => authNote('Nothing happening? Your window may not support Google’s popup. Try <b>Sign in in this window</b> below.', true), 20000);
   try { await requestToken(''); clearTimeout(watchdog); await onSignedIn(); }
   catch (e) { clearTimeout(watchdog); const m = authErrorMessage(e); authNote(esc(m), e && e.error !== 'popup_closed'); toast(m, 'error'); }
 }
 async function reconnect() {
-  if (useRedirect()) { redirectSignIn(); return; }
+  if (authKind() === 'redirect') { redirectSignIn(); return; }
+  if (authKind() === 'browser') { browserSignIn(); return; }
   try { await requestToken(''); if (S.loaded) { toast('Reconnected', 'success'); refreshAll(true); } else await onSignedIn(); }
   catch (e) { toast(authErrorMessage(e), 'error'); }
 }
@@ -2684,6 +2791,9 @@ function focusAdd() {
    ====================================================================== */
 const taskFromEl = el => { const k = el.closest('[data-key]')?.dataset.key; return k ? taskByKey(k) : null; };
 const ACTIONS = {
+  signInBrowser: () => browserSignIn(), linkSignIn: () => linkSignIn(),
+  bwCopy: () => { const i = $('#bwUrl'); try { navigator.clipboard.writeText(BW.url); } catch (e) { i && i.select(); try { document.execCommand('copy'); } catch (e2) {} } toast('Link copied', 'success', { ttl: 1500 }); },
+  bwOpen: () => { BW && openExternal(BW.url); }, bwCancel: () => stopBW(),
   resetApp: () => resetAppData(), signIn: () => signIn(), signInRedirect: () => redirectSignIn(), signOut: () => signOut(), startDemo: () => startDemo(), exitDemo: () => exitDemo(), reconnect: () => reconnect(),
   nav: a => { const v = a.dataset.view; if (v === 'calendar') expandCalendar(); else if (S.view === 'calendar' && v === 'horizon') collapseCalendar(); else navTo(v); }, collapseNav: () => { P.navCollapsed = !P.navCollapsed; savePrefs(); render(); },
   toggleNav: () => { S.navOpen = !S.navOpen; render(); }, mobTab: a => { S.mob = a.dataset.tab; if (S.mob === 'day') P.tideOpen = true; render(); },
@@ -3098,7 +3208,8 @@ function boot() {
   applyMica(); applyBg();
   $('#bgFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) setBgFile(f); });
   S.listId = P.listId || 'all';
-  if (/[?&]reset(=|&|$)/.test(location.search)) { resetAppData(true); return; }   // dayplan.html?reset=1 wipes everything
+  if (/[?&]reset(=|&|$)/.test(location.search)) { resetAppData(true); return; }
+  const linkP = linkParams(); if (linkP) { runLinkPage(linkP); return; }   // opened from the desktop app: just sign in and hand over   // dayplan.html?reset=1 wipes everything
   const bad = !CLIENT_ID || CLIENT_ID.startsWith('PASTE_');
   let left = null; try { left = JSON.parse(localStorage.getItem('dayplan.leaving') || 'null'); localStorage.removeItem('dayplan.leaving'); } catch (e) {}
   const oauth = consumeOAuthReturn(); if (oauth) left = null;   // are we coming back from Google's sign-in page?
@@ -3114,7 +3225,7 @@ function boot() {
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.token && !modalOpen()) refreshAll(false); });
   };
   tickers();
-  if (bad || location.protocol === 'file:') { $('#signInBtn').disabled = true; $('#redirBtn').disabled = true; return; }
+  if (bad || location.protocol === 'file:') { $('#signInBtn').disabled = true; $('#redirBtn').disabled = true; $('#browserBtn').disabled = true; return; }
   if (P.hint) $('#signInBtn').textContent = 'Continue as ' + P.hint;
   if (oauth && oauth.ok) { P.authMode = 'redirect'; savePrefs(); onSignedIn(); return; }   // remembered: this window can't use popups
   if (oauth && oauth.error && !/^(login_required|interaction_required|consent_required|account_selection_required)$/.test(oauth.error)) {
@@ -3127,13 +3238,14 @@ function boot() {
   }
   if (sess) { S.token = sess.t; S.tokenExp = sess.exp; scheduleRefresh((sess.exp - Date.now()) / 1000 + 90); onSignedIn(); }
   else if (left) { /* handled above */ }
-  else if (P.hint && useRedirect()) {   // returning user, expired token: quietly bounce through Google and straight back
+  else if (P.hint && authKind() === 'browser') { $('#app').hidden = true; $('#auth').hidden = false; }
+  else if (P.hint && authKind() === 'redirect') {   // returning user, expired token: quietly bounce through Google and straight back
     if (bounceAllowed()) { redirectSignIn('none'); return; }
     $('#app').hidden = true; $('#auth').hidden = false;
   }
   whenGIS(async () => {
     initAuth();
-    if (!sess && P.hint && !useRedirect()) {
+    if (!sess && P.hint && !noPopup()) {
       try { await silentRefresh(); await onSignedIn(); }
       catch (e) { $('#reconnect').hidden = false; armGesture(); }
     }
