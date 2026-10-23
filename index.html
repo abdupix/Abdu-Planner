@@ -496,7 +496,6 @@ body{background:radial-gradient(60% 55% at 6% 0%,rgba(255,170,130,.24),transpare
 #bgLayer{inset:-90px;z-index:-2;filter:blur(48px) saturate(1.6)}
 #micaTint{position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--mica-tint);opacity:0;transition:opacity .8s ease}
 html.has-bg #micaTint{opacity:1}
-#micaTint::after{content:"";position:absolute;inset:0;opacity:.07;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
 /* the navigation sits directly on the mica, no card */
 .nav,html.has-bg .nav{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none;border-radius:0;padding:8px 4px 6px}
 html.has-bg .nav::before{display:none}
@@ -513,7 +512,6 @@ html.has-bg .nav::before{display:none}
 .profile:hover{background:rgba(255,255,255,.45)}
 /* the main card gets a very light mica of its own */
 .canvas{background:color-mix(in srgb,var(--canvas) 90%,transparent);-webkit-backdrop-filter:blur(40px) saturate(1.35);backdrop-filter:blur(40px) saturate(1.35)}
-.canvas::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:.045;mix-blend-mode:overlay;z-index:0;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
 .main{position:relative;z-index:1}
 .tide{z-index:1}
 .canvas>.main,.canvas>.tide{transition:opacity .24s ease}
@@ -862,6 +860,10 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
   .calwrap{transition:padding-right .5s var(--ease)}
   .shell.ev-open[data-view="calendar"] .calwrap{padding-right:calc(var(--tide-w) + var(--ev-gap,0px))}
 }
+/* Lite mode: no live blur layers at all */
+html.lite .canvas,html.lite .tide,html.lite .pomo-ic,html.lite .pomo-sq,html.lite .pomo-tabs,html.lite .nav,html.lite .backdrop{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html.lite .canvas{background:var(--canvas)}
+html.lite .tide{background:var(--surface)}
 </style>
 </head>
 <body>
@@ -1044,7 +1046,7 @@ const PREF_KEY = 'dayline.prefs.v1';   // same key as earlier versions so you st
 const DEFAULT_PREFS = {
   theme: 'auto', workStart: '09:00', workEnd: '17:00', defaultDuration: 30, weekStart: 1,
   visibleCalendars: null, defaultCalendar: null, reflections: {}, listId: 'all', hint: '',
-  tideOpen: true, tideDays: 1, calMode: 'week', navCollapsed: false,
+  lite: false, tideOpen: true, tideDays: 1, calMode: 'week', navCollapsed: false,
   filters: { tasks: true, events: true, done: true }, trash: [], timer: null, unschedOpen: false, authMode: '', name: 'Abdu', mica: { window: 55, card: 25, cal: 50, windowBlur: 48, cardBlur: 34, calBlur: 40 },
   pomo: { focus: 25, break: 5, sound: true, stats: { date: '', sessions: 0, minutes: 0 } }
 };
@@ -1056,7 +1058,7 @@ function loadPrefs() {
   P.mica = { ...DEFAULT_PREFS.mica, ...(P.mica || {}) };
   if (!Array.isArray(P.trash)) P.trash = [];
 }
-const APPEARANCE_KEYS = ['theme', 'mica', 'name', 'navCollapsed', 'tideOpen', 'tideDays', 'unschedOpen', 'pomo', 'calMode', 'weekStart', 'workStart', 'workEnd', 'defaultDuration'];
+const APPEARANCE_KEYS = ['theme', 'lite', 'mica', 'name', 'navCollapsed', 'tideOpen', 'tideDays', 'unschedOpen', 'pomo', 'calMode', 'weekStart', 'workStart', 'workEnd', 'defaultDuration'];
 function savePrefs() {
   try {
     if (S.demo) {   // demo mode only remembers how the app looks, never its (made-up) data
@@ -1067,6 +1069,7 @@ function savePrefs() {
     localStorage.setItem(PREF_KEY, JSON.stringify(P));
   } catch (e) { /* storage unavailable */ }
 }
+function applyLite() { document.documentElement.classList.toggle('lite', !!P.lite); if (typeof applyBg === 'function') applyBg(); }
 function applyTheme() { const r = document.documentElement; P.theme === 'auto' ? r.removeAttribute('data-theme') : (r.dataset.theme = P.theme); updateNavTone(); if (typeof applyBg === 'function' && bgCache) applyBg(); }
 
 /* ======================================================================
@@ -1812,7 +1815,7 @@ async function loadWeek(wk) {
   S.loadedWeeks.add(wk);
   const from = fromKey(wk), to = addDays(from, 7), cals = S.calendars.filter(isVisible);
   const res = await Promise.allSettled(cals.map(c => fetchCalEvents(c, from, to)));
-  const ok = new Set(); const fresh = [];
+  const ok = new Set(); const fresh = []; const sig0 = evSig();
   res.forEach((r, i) => { if (r.status === 'fulfilled') { ok.add(cals[i].id); fresh.push(...r.value); } });
   const bad = res.find(r => r.status === 'rejected');
   if (bad) { S.loadedWeeks.delete(wk); if (Date.now() - lastEvErr > 20000) { lastEvErr = Date.now(); toast('Couldn’t load a calendar: ' + bad.reason.message, 'error'); } }
@@ -1820,8 +1823,10 @@ async function loadWeek(wk) {
   const keep = S.events.filter(e => e.pending || !inWeek(e) || !ok.has(e.cal));
   const seen = new Set(keep.map(e => e.key));
   S.events = [...keep, ...fresh.filter(e => !seen.has(e.key))];
-  render();
+  if (evSig() !== sig0) render();   // skip the full redraw when nothing changed
 }
+const evSig = () => S.events.map(e => [e.key, e.title, +e.start, +e.end, e.color, e.desc, e.loc, e.free, e.pending ? 1 : 0, (e.attendees || []).length].join('|')).join('\n');
+const taskSig = () => S.tasks.map(t => [tk(t), t.title, t.notes, t.est, t.actual, t.priority, t.energy, t.repeat, t.isBreak, t.due, t.done, t.parent, t.pos, t.comments.length].join('|')).join('\n');
 function needWeeks() {
   if (!S.calendars.length || !S.token) return;
   const keys = new Set();
@@ -2569,6 +2574,7 @@ function settingsModal(sec) {
         ${sec_('general', `<h3>General</h3>
           <div class="lab">Your name<input type="text" name="uname" maxlength="30" value="${esc(P.name || '')}" placeholder="Abdu"></div>
           <div class="lab">Theme${ddField('theme', [['auto', 'Match system'], ['light', 'Light'], ['dark', 'Dark']], P.theme)}</div>
+          <label class="check"><input type="checkbox" name="lite" ${P.lite ? 'checked' : ''}>Lite mode: no wallpaper or glass blur (uses much less memory)</label>
           <div class="lab">Week starts on${ddField('wk', [[1, 'Monday'], [0, 'Sunday']], P.weekStart)}</div>`)}
         ${sec_('planning', `<h3>Planning</h3>
           <div class="row2"><label>Working day starts<input type="time" name="ws" value="${esc(P.workStart)}"></label><label>Working day ends<input type="time" name="we" value="${esc(P.workEnd)}"></label></div>
@@ -2599,9 +2605,9 @@ function settingsModal(sec) {
         e.preventDefault();
         const f = new FormData(e.target), wkChanged = P.weekStart !== +f.get('wk') || P.defaultCalendar !== f.get('cal');
         if (hm2min(f.get('we')) <= hm2min(f.get('ws'))) { toast('Working hours must end after they start.', 'error'); SETSEC = 'planning'; $$('.set .sec').forEach(x => { x.hidden = x.dataset.sec !== 'planning'; }); $$('.set-nav button').forEach(b => b.classList.toggle('on', b.dataset.sec === 'planning')); return; }
-        P.name = (f.get('uname') || '').trim() || 'Abdu'; P.workStart = f.get('ws'); P.workEnd = f.get('we'); P.defaultDuration = +f.get('dur'); P.weekStart = +f.get('wk'); P.defaultCalendar = f.get('cal'); P.theme = f.get('theme');
+        P.name = (f.get('uname') || '').trim() || 'Abdu'; P.workStart = f.get('ws'); P.workEnd = f.get('we'); P.defaultDuration = +f.get('dur'); P.weekStart = +f.get('wk'); P.defaultCalendar = f.get('cal'); P.theme = f.get('theme'); P.lite = f.has('lite');
         P.pomo.focus = Math.max(1, Math.min(120, parseInt(f.get('pf')) || 25)); P.pomo.break = Math.max(1, Math.min(120, parseInt(f.get('pb')) || 5)); P.pomo.sound = f.has('ps');
-        savePrefs(); applyTheme(); closeModal();
+        savePrefs(); applyTheme(); applyLite(); closeModal();
         if (wkChanged) { S.loadedWeeks.clear(); }
         render();
       };
@@ -3611,17 +3617,28 @@ function refreshBgThumbs() {
   const n = $('#bgnote'); if (n) n.textContent = bgNote();
 }
 function applyBg() { bgBusy = bgBusy.then(_applyBg, _applyBg); return bgBusy; }
+const bgLight = new Map();
+async function lightBlob(blob) {   // the wallpaper sits behind heavy blur, so a smaller copy looks identical and uses far less memory
+  if (bgLight.has(blob)) return bgLight.get(blob);
+  let out = blob;
+  try {
+    const bmp = await createImageBitmap(blob), m = Math.max(bmp.width, bmp.height);
+    if (m > 1600) { const sc = 1600 / m, c = document.createElement('canvas'); c.width = Math.round(bmp.width * sc); c.height = Math.round(bmp.height * sc); c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height); out = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.86)) || blob; }
+    bmp.close && bmp.close();
+  } catch (e) {}
+  bgLight.clear(); bgLight.set(blob, out); return out;
+}
 async function _applyBg() {
   await loadBgCache();
-  const blob = (isDarkTheme() ? (bgCache.dark || bgCache.light) : bgCache.light) || null;
+  const blob = P.lite ? null : ((isDarkTheme() ? (bgCache.dark || bgCache.light) : bgCache.light) || null);
   const r = document.documentElement;
   if (blob === bgBlob) { updateNavTone(); refreshBgThumbs(); return; }   // already showing it
   if (blob) {
-    const old = bgUrl; bgUrl = URL.createObjectURL(blob);
+    const old = bgUrl; bgUrl = URL.createObjectURL(await lightBlob(blob));
     r.style.setProperty('--bg-img', `url("${bgUrl}")`); r.classList.add('has-bg');
     if (old) setTimeout(() => URL.revokeObjectURL(old), 1000);
     bgBlob = blob; await probeBg(blob);
-  } else { r.classList.remove('has-bg'); bgBlob = null; bgProbe = null; }
+  } else { r.classList.remove('has-bg'); r.style.removeProperty('--bg-img'); if (bgUrl) { URL.revokeObjectURL(bgUrl); bgUrl = null; } bgBlob = null; bgProbe = null; }
   updateNavTone(); refreshBgThumbs();
 }
 let resizeT = null;
@@ -3630,7 +3647,7 @@ async function setBgFile(file, slot = 'light') {
   if (!file || !file.type.startsWith('image/')) { toast('Please choose an image file', 'error'); return; }
   try {
     const bmp = await (window.createImageBitmap ? createImageBitmap(file) : new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = URL.createObjectURL(file); }));
-    const w = bmp.width, h = bmp.height, sc = Math.min(1, 2560 / Math.max(w, h));
+    const w = bmp.width, h = bmp.height, sc = Math.min(1, 1600 / Math.max(w, h));
     const c = document.createElement('canvas'); c.width = Math.round(w * sc); c.height = Math.round(h * sc);
     c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
     const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.88));
@@ -3657,16 +3674,18 @@ function revealTask(t) {
   setTimeout(() => { const c = $(`.tcard[data-key="${tk(t)}"]`); c && c.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' }); }, 380);
 }
 let lastRefreshErr = 0;
+let lastRefreshAt = 0;
 async function refreshAll(manual) {
   if (!S.token || S.pending > 0 || DRAG || (modalOpen() && !manual)) { if (manual) toast('Busy saving changes — try again in a moment', 'info'); return; }
   try {
-    const before = new Set(S.tasks.map(tk));
+    lastRefreshAt = Date.now();
+    const before = new Set(S.tasks.map(tk)), sigT = taskSig();
     await loadTasks();
     S.loadedWeeks.clear();
     const fresh = S.tasksLoadedOnce ? S.tasks.filter(t => !t.parent && !t.done && !before.has(tk(t))) : [];
     S.tasksLoadedOnce = true;
     if (fresh.length) { S.fresh = new Set(fresh.map(tk)); setTimeout(() => { S.fresh = null; }, 3200); }
-    render();
+    if (manual || fresh.length || taskSig() !== sigT) render(); else needWeeks();   // quiet background refresh: no redraw when nothing changed
     if (fresh.length) toast(`${fresh.length} new task${fresh.length > 1 ? 's' : ''} from Google Tasks: “${trunc(fresh[0].title, 28)}”${fresh.length > 1 ? ' + more' : ''}`, 'success', { action: { label: 'Show', fn: () => revealTask(fresh[0]) }, ttl: 7000 });
     else if (manual) toast('Up to date', 'success', { ttl: 1800 });
   } catch (e) { if (manual || Date.now() - lastRefreshErr > 600000) { toast('Refresh failed: ' + e.message, 'error'); lastRefreshErr = Date.now(); } }
@@ -3686,7 +3705,7 @@ function armGesture() {
   document.addEventListener('pointerdown', go, true); document.addEventListener('keydown', go, true);
 }
 function boot() {
-  loadPrefs(); applyTheme();
+  loadPrefs(); applyTheme(); document.documentElement.classList.toggle('lite', !!P.lite);
   $('#icSearch').innerHTML = ic('search');
   applyMica(); applyBg();
   try { const mq = matchMedia('(prefers-color-scheme: dark)'), on = () => { if (P.theme === 'auto') applyBg(); }; if (mq.addEventListener) mq.addEventListener('change', on); else if (mq.addListener) mq.addListener(on); } catch (e) {}
@@ -3704,8 +3723,10 @@ function boot() {
   if (location.protocol === 'file:') authNote('This page is open from a <b>file://</b> address. Google sign-in needs http(s). Run <code>py -m http.server 8000</code> in this folder and open <code>http://localhost:8000</code>, or host it on GitHub Pages. You can still try the demo below.', true);
   else if (bad) authNote('Set <b>CLIENT_ID</b> at the top of this file first (see the README comment), or try the demo below.', true);
   const tickers = () => {
-    setInterval(() => { updateNow(); tickTimer(); }, 1000);
-    setInterval(() => { if (document.visibilityState === 'visible' && S.token && !modalOpen()) refreshAll(false); }, 60000);
+    let n = 0;
+    setInterval(() => { if (document.hidden) return; if (P.timer || TM) tickTimer(); if (++n % 15 === 0) updateNow(); }, 1000);
+    setInterval(() => { if (document.visibilityState === 'visible' && document.hasFocus() && S.token && !modalOpen()) refreshAll(false); }, 60000);
+    window.addEventListener('focus', () => { if (S.token && !modalOpen() && Date.now() - lastRefreshAt > 30000) refreshAll(false); });
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.token && !modalOpen()) refreshAll(false); });
   };
   tickers();
