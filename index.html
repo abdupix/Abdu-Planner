@@ -1,6 +1,6 @@
 <!--
 ================================================================================
-DAYPLAN — personal daily planner on top of Google Calendar + Google Tasks
+AbduPlan — personal daily planner on top of Google Calendar + Google Tasks
 ================================================================================
 Single user · no backend · no API keys · free to run.
 
@@ -40,7 +40,7 @@ in the task's notes as marker lines — visible in the Google Tasks app too):
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>dayplan</title>
+<title>AbduPlan</title>
 <link rel="icon" href="sunrise.ico" type="image/x-icon">
 <link rel="shortcut icon" href="sunrise.ico">
 <script>
@@ -861,7 +861,7 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
 <div id="micaTint" aria-hidden="true"></div>
 <div id="auth" class="auth" hidden>
   <div class="auth-card">
-    <div class="logo" style="justify-content:center;font-size:22px"><i style="width:11px;height:11px"></i><b>dayplan</b></div>
+    <div class="logo" style="justify-content:center;font-size:22px"><i style="width:11px;height:11px"></i><b>AbduPlan</b></div>
     <h1>Plan your day</h1>
     <p>On top of your Google Calendar and Google Tasks.</p>
     <button class="btn accent" id="signInBtn" data-action="signIn">Continue with Google</button>
@@ -882,7 +882,7 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
   <div id="reconnect" class="reconnect" hidden>Your Google session expired. <button class="btn sm accent" data-action="reconnect">Reconnect</button></div>
   <div class="shell" id="shell" data-view="horizon" data-mob="tasks">
     <aside class="nav" id="nav">
-      <div class="nav-head"><div class="logo"><i></i><b>dayplan</b></div><span class="grow"></span><button class="icon-btn" data-action="collapseNav" id="btnCollapse" title="Collapse sidebar"></button></div>
+      <div class="nav-head"><div class="logo"><i></i><b>AbduPlan</b></div><span class="grow"></span><button class="icon-btn" data-action="collapseNav" id="btnCollapse" title="Collapse sidebar"></button></div>
       <div class="nav-search"><span id="icSearch"></span><input type="text" id="navSearch" placeholder="Search" aria-label="Search" autocomplete="off"></div>
       <div class="nav-items" id="navItems"></div>
       <div class="nav-foot" id="navFoot"></div>
@@ -1122,9 +1122,9 @@ function redirectSignIn(prompt) {
   navigateTo(buildAuthUrl(prompt));
 }
 function hardReload() { if (window.__navSpy) return window.__navSpy('reload'); location.replace(location.pathname); }
-/* Wipes everything Dayplan stored in this window: settings, saved sign-in, background picture, local Trash, journal. */
+/* Wipes everything AbduPlan stored in this window: settings, saved sign-in, background picture, local Trash, journal. */
 async function resetAppData(skipConfirm) {
-  if (!skipConfirm && !confirm('Reset Dayplan on this device?\n\nThis clears your settings, saved sign-in, background picture, journal and local Trash. Your Google Tasks and Calendar are not touched.')) return;
+  if (!skipConfirm && !confirm('Reset AbduPlan on this device?\n\nThis clears your settings, saved sign-in, background picture, journal and local Trash. Your Google Tasks and Calendar are not touched.')) return;
   try { stopBW(); } catch (e) {}
   try { if (S.token && !S.demo && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(S.token, () => {}); } catch (e) {}
   try { localStorage.clear(); sessionStorage.clear(); } catch (e) {}
@@ -1170,7 +1170,7 @@ async function openExternal(url) {
 }
 function bwHTML() {
   return `<div class="bw"><div class="bw-row"><span class="spin"></span><b>Waiting for you to sign in…</b></div>
-    <p>Your browser should have opened a Dayplan page. Sign in with Google there. This window connects by itself when you finish.</p>
+    <p>Your browser should have opened a AbduPlan page. Sign in with Google there. This window connects by itself when you finish.</p>
     <div class="bw-link"><input type="text" readonly id="bwUrl" value="${esc(BW ? BW.url : '')}" aria-label="Sign-in link"><button class="btn sm" type="button" data-action="bwCopy">Copy link</button></div>
     <p class="small muted">Nothing opened, or it opened inside this app? Copy the link and paste it into your browser.</p>
     <div class="inline"><button class="btn sm" type="button" data-action="bwOpen">Open again</button><button class="btn sm ghost" type="button" data-action="bwCancel">Cancel</button></div></div>`;
@@ -1223,8 +1223,8 @@ function linkParams() {
 function runLinkPage(L) {
   LINK = L; try { history.replaceState(null, '', location.pathname); } catch (e) {}
   $('#app').hidden = true; $('#auth').hidden = false;
-  $('.auth-card h1').textContent = 'Connect Dayplan';
-  $('.auth-card > p').textContent = 'Sign in with Google here, then go back to the Dayplan app. It connects automatically.';
+  $('.auth-card h1').textContent = 'Connect AbduPlan';
+  $('.auth-card > p').textContent = 'Sign in with Google here, then go back to the AbduPlan app. It connects automatically.';
   ['#browserBtn', '#demoBtn', '.auth-help'].forEach(x => { const e = $(x); if (e) e.hidden = true; });
   $$('.auth-card p.small').forEach(e => (e.hidden = true));
   const btn = $('#signInBtn'); btn.textContent = 'Continue with Google'; btn.dataset.action = 'linkSignIn';
@@ -1243,7 +1243,7 @@ async function publishLink() {
   const msg = new Uint8Array(iv.length + ct.length); msg.set(iv); msg.set(ct, iv.length);
   const r = await fetch(`${RELAY}/${LINK.topic}`, { method: 'POST', body: b64u(msg) });
   if (!r.ok) throw new Error('relay ' + r.status);
-  $('.auth-card').innerHTML = '<div class="logo" style="justify-content:center;font-size:22px"><i style="width:11px;height:11px"></i><b>dayplan</b></div><h1>You’re connected</h1><p>Go back to the Dayplan app. You can close this tab.</p>';
+  $('.auth-card').innerHTML = '<div class="logo" style="justify-content:center;font-size:22px"><i style="width:11px;height:11px"></i><b>AbduPlan</b></div><h1>You’re connected</h1><p>Go back to the AbduPlan app. You can close this tab.</p>';
   try { window.close(); } catch (e) {}
 }
 function whenGIS(cb) {
@@ -1295,7 +1295,7 @@ function authErrorMessage(err) {
   if (k === 'state_mismatch') return 'Sign-in couldn’t be verified. Please try again.';
   if (k === 'redirect_mode') return 'Please reconnect.';
   if (k === 'access_denied') return 'Access denied. Make sure your Google account is a test user, and approve all permissions.';
-  if (k === 'missing_scopes') return 'Dayplan needs all requested permissions (Calendar and Tasks). Sign in again and keep every box ticked.';
+  if (k === 'missing_scopes') return 'AbduPlan needs all requested permissions (Calendar and Tasks). Sign in again and keep every box ticked.';
   if (k === 'invalid_client' || k === 'idpiframe_initialization_failed') return 'Google rejected the Client ID. Check CLIENT_ID and the authorized JavaScript origin.';
   return 'Sign-in failed' + (k ? ` (${k})` : '') + '.';
 }
@@ -2104,7 +2104,7 @@ function renderList() {
 /* ---------- trash / search ---------- */
 function renderTrash() {
   return mh('Trash', P.trash.length ? `<button class="btn sm" data-action="emptyTrash">Empty trash</button>` : '') + `<div class="pagescroll"><div class="page-inner">
-    <p class="muted small">Google Tasks has no trash, so Dayplan keeps the last 50 deleted tasks in this browser.</p>
+    <p class="muted small">Google Tasks has no trash, so AbduPlan keeps the last 50 deleted tasks in this browser.</p>
     ${P.trash.length ? P.trash.map(r => `<div class="rowx"><span class="nm"><b>${esc(r.title)}</b><div class="muted small">${r.due ? esc(fmtDueLabel(r.due)) + ' · ' : ''}deleted ${esc(fmtAgo(new Date(r.at).toISOString()))}${(r.subs || []).length ? ' · ' + r.subs.length + ' sub-tasks' : ''}</div></span><button class="btn sm" data-action="restoreTrash" data-at="${r.at}">${ic('undo')}Restore</button></div>`).join('') : '<div class="empty"><b>Trash is empty</b>Deleted tasks can be restored from here.</div>'}</div></div>`;
 }
 function renderSearch() {
@@ -2539,7 +2539,7 @@ function scheduleModal(t) {
 function calsModal() {
   openModal({
     title: 'Connect calendars',
-    body: `<p class="lede">Dayplan is connected to your Google account. Choose which calendars appear. Your task-block calendar is always shown. To add another Google calendar, subscribe to it in Google Calendar and it will appear here.</p>` +
+    body: `<p class="lede">AbduPlan is connected to your Google account. Choose which calendars appear. Your task-block calendar is always shown. To add another Google calendar, subscribe to it in Google Calendar and it will appear here.</p>` +
       S.calendars.map(c => `<label class="rowx" style="--c:${esc(c.color)}"><span class="nm"><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${esc(c.color)};margin-right:8px"></i>${esc(c.name)}${c.role === 'reader' || c.role === 'freeBusyReader' ? ' <small class="muted">(read-only)</small>' : ''}</span><input type="checkbox" data-cal="${esc(c.id)}" ${isVisible(c) ? 'checked' : ''} ${blockCal() && c.id === blockCal().id ? 'disabled' : ''}></label>`).join(''),
     foot: `<button class="btn accent" data-action="closeModal">Done</button>`, noFocus: true
   });
@@ -3593,7 +3593,7 @@ async function onSignedIn() {
   await loadAll();
 }
 function showShell() { $('#auth').hidden = true; $('#app').hidden = false; renderMainShell(); }
-function renderMainShell() { $('#main').innerHTML = mh('dayplan') + '<div class="skel"></div><div class="skel"></div><div class="skel"></div>'; }
+function renderMainShell() { $('#main').innerHTML = mh('AbduPlan') + '<div class="skel"></div><div class="skel"></div><div class="skel"></div>'; }
 function armGesture() {
   // Browsers only allow Google's silent-login popup after a user gesture, so retry on the first click/key.
   const go = async () => {
