@@ -766,6 +766,88 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
 .bw-link{display:flex;gap:6px}.bw-link input{font-size:12px;padding:7px 10px}
 .spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--accent-soft);border-top-color:var(--accent);animation:spin .8s linear infinite;flex:none}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* tighter task cards: smaller gap, a little less vertical padding, slightly smaller text */
+.bcards,.stack{gap:9px}
+.tcard{padding:11px 15px 10px}
+.tc-title{font-size:14px}
+.tc-time{font-size:12.5px}
+.tc-subs{margin-top:8px}
+.tc-subs li{font-size:12.5px;padding:3px 0}
+.tc-meta{margin-top:8px;gap:5px}
+.tc-subs+.tc-meta{margin-top:9px}
+.pill{font-size:11.5px;padding:2px 8px}
+.radio.md{width:20px;height:20px}
+
+.thumb{width:58px;height:34px;border-radius:var(--r-sm);background:var(--surface-2) center/cover no-repeat;box-shadow:var(--sh-xs);flex:none}
+
+/* calendar: horizontal day strip with smooth scrolling that settles on a day */
+.cal-x{overflow:auto;scroll-snap-type:x mandatory;scroll-padding-left:64px;overscroll-behavior-x:contain;position:relative}
+.cal-x .cal-inner{width:max-content;min-width:100%}
+.cal-top{position:sticky;top:0;z-index:6;background:var(--surface);width:max-content;min-width:100%}
+.cal-row{display:grid;grid-template-columns:64px;grid-auto-flow:column;grid-auto-columns:var(--colw)}
+.cal-row.cal-allday{padding-bottom:4px}
+.cal-allday>div:not(.cal-corner){display:flex;flex-direction:column;gap:3px;min-width:0;padding:0 2px}
+.cal-allday button{border:0;border-left:3px solid var(--c);background:color-mix(in srgb,var(--c) 16%,var(--surface));border-radius:var(--r-sm);padding:2px 8px;font-size:11.5px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-corner{position:sticky;left:0;z-index:7;background:var(--surface)}
+.cal-x .tl{display:grid;grid-template-columns:64px max-content;width:max-content;position:relative;padding-top:12px}
+.cal-x .gutter{position:sticky;left:0;z-index:5;background:var(--surface)}
+.cal-x .tl-cols{display:grid;grid-auto-flow:column;grid-auto-columns:var(--colw);margin-right:0}
+.cal-x .dcol{scroll-snap-align:start}
+.cal-head .tl-hd{white-space:nowrap}
+
+/* event details side panel */
+.evpanel{width:360px;z-index:8;display:flex;flex-direction:column}
+.shell.ev-open .tide:not(.evpanel){opacity:0;pointer-events:none}
+.evt.sel{box-shadow:0 0 0 2px var(--accent),var(--sh-md)}
+.ev-head{display:flex;align-items:center;gap:2px;padding:10px 10px 4px 20px;flex:none}
+.ev-type{font-weight:600;font-size:14px}
+.ev-body{flex:1;min-height:0;overflow-y:auto;padding:0 20px 28px}
+.ev-title{width:100%;border:0;background:transparent;font-size:18px;font-weight:600;padding:8px 0 12px;box-shadow:none!important;font-family:var(--font-head);letter-spacing:-.01em}
+.ev-title:focus,.ev-in:focus,.ev-desc:focus{background:transparent}
+.ev-sec{padding:12px 0;box-shadow:0 -1px 0 var(--grid)}
+.ev-row{display:flex;align-items:center;gap:10px;min-height:34px;font-size:14px}
+.ev-row>.ic{color:var(--ink-3);width:16px;height:16px;flex:none}
+.ev-indent{padding-left:26px}
+.ev-pill{border:0;background:transparent;padding:4px 8px;margin:0 -2px;border-radius:var(--r-sm);font-size:14px;color:var(--ink);text-align:left;transition:background .15s}
+.ev-pill:hover:not(:disabled){background:var(--surface-2)}
+.ev-pill:disabled{cursor:default}
+.ev-pill.muted{color:var(--ink-3)}
+.ev-arrow{color:var(--ink-3);display:grid}.ev-arrow .ic{width:15px;height:15px}
+.ev-dur{color:var(--ink-3);font-size:13px;margin-left:4px;white-space:nowrap}
+.ev-fixed{color:var(--ink)}.ev-fixed.muted{color:var(--ink-3)}
+.ev-who{color:var(--ink-2)}
+.ev-chips{gap:6px;flex-wrap:wrap}
+.ev-chip{border:0;background:transparent;color:var(--ink-3);padding:3px 8px;border-radius:var(--r-sm);font-size:13.5px;transition:background .15s,color .15s}
+.ev-chip:hover:not(:disabled){background:var(--surface-2);color:var(--ink)}
+.ev-chip.on{background:var(--accent-soft);color:var(--accent)}
+.ev-chip:disabled{cursor:default}
+.ev-note{font-size:12.5px;color:var(--ink-3);padding:2px 0 4px}
+.ev-people{display:flex;flex-direction:column;gap:2px;padding-bottom:4px}
+.ev-person{display:flex;align-items:center;gap:8px;min-height:30px}
+.ev-pn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px}.ev-pn small{color:var(--ink-3)}
+.avatar.sm{width:22px;height:22px;font-size:11px}
+.ev-rs{width:8px;height:8px;border-radius:50%;background:var(--ink-3);flex:none}
+.ev-rs.accepted{background:var(--ok)}.ev-rs.declined{background:var(--warn)}.ev-rs.tentative{background:#f0a020}
+.ev-person .icon-btn{width:24px;height:24px}
+.ev-addp input,.ev-in{border:0;background:transparent;padding:6px 8px;margin-left:-8px;width:calc(100% + 8px);font-size:14px;box-shadow:none!important}
+.ev-addp{padding-left:26px}
+.ev-addp input{margin-left:0;width:100%;padding-left:0}
+.ev-addp input::placeholder,.ev-in::placeholder,.ev-desc::placeholder,.ev-title::placeholder{color:var(--ink-3)}
+.ev-in:disabled,.ev-title:disabled,.ev-desc:disabled{opacity:1;cursor:default}
+.ev-link{color:var(--accent);text-decoration:none;font-size:14px}.ev-link:hover{text-decoration:underline}.ev-link.small{font-size:13px}
+.ev-links{display:flex;flex-direction:column;gap:2px}
+.ev-desc{width:100%;border:0;background:transparent;padding:0;resize:vertical;min-height:64px;font-size:14px;box-shadow:none!important}
+.ev-sw{width:16px;height:16px;border-radius:5px;border:0;background:var(--c);flex:none;box-shadow:var(--sh-xs);margin:0 2px;transition:transform .15s var(--ease)}
+.ev-sw:hover:not(:disabled){transform:scale(1.2)}
+.swatches{display:grid;grid-template-columns:repeat(6,26px);gap:8px;padding:6px}
+.sw{width:26px;height:26px;border-radius:50%;border:0;background:var(--c);box-shadow:var(--sh-xs);transition:transform .15s var(--ease)}
+.sw:hover{transform:scale(1.15)}.sw.on{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--c)}
+.sw.def{background:conic-gradient(var(--c) 0 50%,transparent 50%) var(--surface-2)}
+@media (max-width:900px){
+  .evpanel.closed{display:none!important}
+  .evpanel:not(.closed){display:flex!important;inset:0 0 calc(58px + env(safe-area-inset-bottom,0px)) 0;right:0;width:auto!important;z-index:9}
+}
 </style>
 </head>
 <body>
@@ -805,6 +887,7 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
       <button class="timer-pill" id="timerPill" data-action="openRunning" hidden></button>
     </div>
     <aside class="tide" id="tide"></aside>
+    <aside class="tide evpanel closed" id="evpanel" aria-hidden="true" aria-label="Event details"></aside>
   </div>
   <nav class="mobtabs"><button data-action="mobTab" data-tab="tasks" class="on">Tasks</button><button data-action="mobTab" data-tab="day">Calendar</button></nav>
 </div>
@@ -914,6 +997,11 @@ const ICONS = {
   undo:'<path d="M9 7L4 12l5 5M4 12h11a5 5 0 010 10h-2"/>',
   user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>',
   lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>',
+  video:'<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/>',
+  pin:'<path d="M12 21s-6-5.2-6-10a6 6 0 0112 0c0 4.8-6 10-6 10z"/><circle cx="12" cy="11" r="2"/>',
+  link:'<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3A4 4 0 0010 18.7l1-1"/>',
+  more:'<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>',
+  copy:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/>',
   bell:'<path d="M6 16v-5a6 6 0 0112 0v5l1.5 2h-15L6 16zM10 21h4"/>',
   music:'<path d="M9 18V6l10-2v12M9 18a3 3 0 11-3-3 3 3 0 013 3zM19 16a3 3 0 11-3-3 3 3 0 013 3z"/>',
   chart:'<path d="M5 20V12M10 20V6M15 20v-8M20 20V9"/>',
@@ -968,7 +1056,7 @@ function savePrefs() {
     localStorage.setItem(PREF_KEY, JSON.stringify(P));
   } catch (e) { /* storage unavailable */ }
 }
-function applyTheme() { const r = document.documentElement; P.theme === 'auto' ? r.removeAttribute('data-theme') : (r.dataset.theme = P.theme); updateNavTone(); }
+function applyTheme() { const r = document.documentElement; P.theme === 'auto' ? r.removeAttribute('data-theme') : (r.dataset.theme = P.theme); updateNavTone(); if (typeof applyBg === 'function' && bgCache) applyBg(); }
 
 /* ======================================================================
    State
@@ -977,7 +1065,7 @@ const S = {
   token: null, tokenExp: 0, calendars: [], lists: [], tasks: [], events: [], loadedWeeks: new Set(),
   day: todayKey(), view: 'horizon', prevView: 'horizon', q: '', listId: 'all', loading: true, loaded: false,
   bStart: dkey(addDays(new Date(), -3)), bEnd: dkey(addDays(new Date(), 18)), vis: null, shift: 0,
-  demo: false, pending: 0, mob: 'tasks', navOpen: false, justDragged: false, dragKey: null, dragSub: null, calMonthRef: null,
+  demo: false, evKey: null, calStart: null, calEnd: null, calAnchor: null, calVis: null, pending: 0, mob: 'tasks', navOpen: false, justDragged: false, dragKey: null, dragSub: null, calMonthRef: null,
   fresh: null, pulse: null, tideFull: false, animating: false, tasksLoadedOnce: false
 };
 let taskIdx = new Map();
@@ -1226,7 +1314,7 @@ async function reconnect() {
 function signOut() {
   if (S.demo) { exitDemo(); return; }
   if (S.token && window.google) google.accounts.oauth2.revoke(S.token, () => {});
-  clearTimeout(refreshTimer); clearSession(); S.loaded = false; $('#reconnect').hidden = true;
+  S.evKey = null; clearTimeout(refreshTimer); clearSession(); S.loaded = false; $('#reconnect').hidden = true;
   S.token = null; S.tokenExp = 0; S.tasks = []; S.events = []; S.calendars = []; S.lists = []; S.loadedWeeks.clear();
   P.hint = ''; savePrefs(); closeModal(true); closePop();
   $('#app').hidden = true; $('#auth').hidden = false; authNote('');
@@ -1351,8 +1439,10 @@ async function demoApi(url, { method = 'GET', body, params } = {}) {
         if (method === 'POST') { const e = { id: 'ev' + (++DEMO.seq), status: 'confirmed', organizer: { self: true }, _cal: cal, ...body }; DEMO.events.push(e); return out(e); }
       } else {
         const e = DEMO.events.find(x => x.id === seg[5] && x._cal === cal); if (!e) nf();
+        if (seg[6] === 'move') { e._cal = q.get('destination'); return out(e); }
         if (method === 'DELETE') { DEMO.events = DEMO.events.filter(x => x !== e); return null; }
         if (method === 'PATCH') {
+          if (body && body.conferenceData && body.conferenceData.createRequest) { e.hangoutLink = 'https://meet.google.com/demo-' + e.id.slice(-6); e.conferenceData = { entryPoints: [{ entryPointType: 'video', uri: e.hangoutLink }] }; body = { ...body }; delete body.conferenceData; }
           for (const [k, v] of Object.entries(body || {})) {
             if (k === 'extendedProperties') e.extendedProperties = { private: { ...(e.extendedProperties?.private || {}), ...(v.private || {}) } };
             else if (v === null) delete e[k]; else e[k] = v;
@@ -1425,7 +1515,7 @@ function demoNewTask() {
 }
 function exitDemo() {
   clearTimeout(DEMO.timer);
-  S.demo = false; S.loaded = false; S.token = null; S.tokenExp = 0;
+  S.evKey = null; S.demo = false; S.loaded = false; S.token = null; S.tokenExp = 0;
   S.tasks = []; S.events = []; S.calendars = []; S.lists = []; S.loadedWeeks.clear(); S.fresh = null; S.view = 'horizon';
   closeModal(true, true); closePop(true);
   loadPrefs(); applyTheme(); applyMica(); S.listId = P.listId || 'all';
@@ -1678,6 +1768,7 @@ function tickTimer() {
 /* ======================================================================
    Calendar — events
    ====================================================================== */
+const EVENT_COLORS = { '1': ['Lavender', '#a4bdfc'], '2': ['Sage', '#7ae7bf'], '3': ['Grape', '#dbadff'], '4': ['Flamingo', '#ff887c'], '5': ['Banana', '#fbd75b'], '6': ['Tangerine', '#ffb878'], '7': ['Peacock', '#46d6db'], '8': ['Graphite', '#e1e1e1'], '9': ['Blueberry', '#5484ed'], '10': ['Basil', '#51b749'], '11': ['Tomato', '#dc2127'] };
 function normEvent(e, cal) {
   const allDay = !!e.start?.date;
   const start = allDay ? fromKey(e.start.date) : new Date(e.start.dateTime);
@@ -1687,7 +1778,11 @@ function normEvent(e, cal) {
   const org = e.organizer;
   const editable = writable && (!e.eventType || e.eventType === 'default') && (!org || org.self || e.creator?.self || e.guestsCanModify || !e.attendees);
   const me = e.attendees?.find(a => a.self);
-  return { key: cal.id + '|' + e.id, id: e.id, cal: cal.id, calName: cal.name, color: cal.color, title: e.summary || '(No title)', start, end, allDay, editable,
+  return { key: cal.id + '|' + e.id, id: e.id, cal: cal.id, calName: cal.name, color: (e.colorId && EVENT_COLORS[e.colorId]) ? EVENT_COLORS[e.colorId][1] : cal.color, calColor: cal.color, colorId: e.colorId || '',
+    title: e.summary || '(No title)', noTitle: !e.summary, start, end, allDay, editable,
+    desc: e.description || '', attendees: e.attendees || [], creator: e.creator || null, organizer: e.organizer || null, attachments: e.attachments || [],
+    meet: e.hangoutLink || ((e.conferenceData && e.conferenceData.entryPoints) || []).filter(x => x.entryPointType === 'video').map(x => x.uri)[0] || '',
+    visibility: e.visibility || 'default', reminders: e.reminders || null, rrule: (e.recurrence || [])[0] || '',
     declined: me?.responseStatus === 'declined', free: e.transparency === 'transparent', link: e.htmlLink, loc: e.location || '', recurring: !!e.recurringEventId,
     taskList: p.plannerTaskList || null, taskId: p.plannerTaskId || null };
 }
@@ -1722,17 +1817,17 @@ function needWeeks() {
   const addRange = (a, b) => { for (let d = fromKey(a); dkey(d) <= b; d = addDays(d, 7)) keys.add(weekStartKey(dkey(d))); keys.add(weekStartKey(b)); };
   addRange(S.day, dkey(addDays(fromKey(S.day), P.tideDays)));
   if (S.view !== 'calendar' && S.vis) addRange(S.vis[0], S.vis[1]);
-  if (S.view === 'calendar') { const r = calRange(); addRange(r[0], r[r.length - 1]); }
+  if (S.view === 'calendar') { const r = calRange(), pad = P.calMode === 'month' ? 0 : 10; addRange(dkey(addDays(fromKey(r[0]), -pad)), dkey(addDays(fromKey(r[r.length - 1]), pad))); }
   keys.forEach(k => { if (!S.loadedWeeks.has(k)) loadWeek(k); });
 }
 const isoTime = d => ({ dateTime: d.toISOString(), timeZone: TZ });
 async function updateEvent(ev, changes, opt = {}) {
   if (ev.pending) { toast('Still saving that block — try again in a second', 'info'); return false; }
-  const prev = { title: ev.title, start: ev.start, end: ev.end };
+  const prev = { title: ev.title, start: ev.start, end: ev.end, noTitle: ev.noTitle };
   Object.assign(ev, changes);
   const body = {};
   if (changes.title !== undefined) body.summary = changes.title;
-  if (changes.start) { body.start = isoTime(ev.start); body.end = isoTime(ev.end); }
+  if (changes.start || changes.end) { if (ev.allDay) { body.start = { date: dkey(ev.start) }; body.end = { date: dkey(ev.end) }; } else { body.start = isoTime(ev.start); body.end = isoTime(ev.end); } }
   render();
   S.pending++;
   try {
@@ -1746,7 +1841,7 @@ async function updateEvent(ev, changes, opt = {}) {
   } catch (e) { Object.assign(ev, prev); render(); toast(`Couldn’t update “${trunc(ev.title)}”: ${e.message}`, 'error'); return false; }
   finally { S.pending--; }
 }
-async function createEvent({ title, start, end, cal, task, description }) {
+async function createEvent({ title, start, end, cal, task, description, location, colorId }) {
   cal = cal || blockCal();
   if (!cal) { toast('No writable calendar found. Check your calendar permissions.', 'error'); return null; }
   const tmp = { key: cal.id + '|' + uid(), id: uid(), cal: cal.id, calName: cal.name, color: cal.color, title, start, end, allDay: false, editable: true, declined: false, free: false, link: '', taskList: task?.list || null, taskId: task?.id || null, pending: true };
@@ -1755,6 +1850,8 @@ async function createEvent({ title, start, end, cal, task, description }) {
   try {
     const body = { summary: title, start: isoTime(start), end: isoTime(end) };
     if (description) body.description = description;
+    if (location) body.location = location;
+    if (colorId) body.colorId = colorId;
     if (task) body.extendedProperties = { private: { plannerTaskId: task.id, plannerTaskList: task.list } };
     const r = await api(`${CAL_API}/calendars/${enc(cal.id)}/events`, { method: 'POST', params: { sendUpdates: 'none' }, body });
     Object.assign(tmp, normEvent(r, cal)); delete tmp.pending; render();
@@ -1844,7 +1941,7 @@ function render() {
   sh.dataset.view = S.view; sh.dataset.mob = S.mob;
   sh.classList.toggle('nav-open', S.navOpen); sh.classList.toggle('nav-collapsed', !!P.navCollapsed);
   $$('.mobtabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.mob));
-  renderNav(); renderMain(); renderTide(); renderTimerPill(); updateNow(); needWeeks();
+  renderNav(); renderMain(); renderTide(); renderEvPanel(); renderTimerPill(); updateNow(); needWeeks();
 }
 const NAV = [['horizon', 'Horizon', 'horizon'], ['inbox', 'Inbox', 'inbox'], ['today', 'Today', 'today'], ['backlog', 'Backlog', 'backlog'], ['journal', 'Journal', 'journal'], ['coach', 'Coach', 'coach']];
 function inboxTasks() { const l = S.lists[0]?.id; return tops().filter(t => !t.done && !t.due && t.list === l); }
@@ -1897,6 +1994,7 @@ function listSelect() {
 }
 function renderMain() {
   const main = $('#main'); if (!main) return;
+  if (S.view === 'calendar' && P.calMode !== 'month' && calBusy() && $('.cal-x')) { calDeferred = true; return; }   // redraw after the scroll settles
   const ui = captureUI();
   let html = '';
   if (S.loading) html = mh('Loading…') + '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
@@ -1909,7 +2007,7 @@ function renderMain() {
   else if (S.view === 'calendar') html = renderCalendar();
   main.innerHTML = html;
   restoreUI(ui);
-  if (S.view === 'calendar') restoreTL('cal');
+  if (S.view === 'calendar') { restoreTL('cal'); calAfterRender(); }
 }
 
 /* ---------- cards ---------- */
@@ -2076,7 +2174,7 @@ function layoutDay(evs, key) {
 const rangeLabel = (a, b) => `${fmtTime(a)} – ${fmtTime(b)}`;
 function evHTML(it) {
   const e = it.ev, t = taskOf(e), hrs = (it.e - it.s) / 60;
-  const cls = ['evt', t ? 'task' : '', e.editable ? '' : 'ro', t && t.done ? 'done' : '', e.pending ? 'pending' : '', hrs < 0.7 ? 'tight' : ''].join(' ');
+  const cls = ['evt', S.evKey === e.key ? 'sel' : '', t ? 'task' : '', e.editable ? '' : 'ro', t && t.done ? 'done' : '', e.pending ? 'pending' : '', hrs < 0.7 ? 'tight' : ''].join(' ');
   const left = (it.col / it.cols * 100).toFixed(3), width = (100 / it.cols).toFixed(3);
   return `<div class="${cls}" tabindex="0" role="button" data-action="openEvent" data-ek="${esc(e.key)}" aria-label="${esc(e.title)}, ${esc(rangeLabel(e.start, e.end))}"
     style="top:calc(var(--hh) * ${(it.s / 60).toFixed(4)});height:calc(var(--hh) * ${hrs.toFixed(4)} - 2px);left:calc(${left}% + 2px);width:calc(${width}% - 6px);--c:${esc(e.color)}">
@@ -2120,7 +2218,7 @@ function renderTide() {
   const closed = S.view === 'calendar' || (!mobile && !P.tideOpen);
   const width = 300 + n * 70, sh = $('#shell');
   el.style.width = width + 'px'; el.classList.toggle('closed', closed);
-  sh.style.setProperty('--tide-w', closed ? '0px' : width + 'px');
+  syncTideWidth();
   if (closed) { el.setAttribute('aria-hidden', 'true'); return; }
   el.removeAttribute('aria-hidden');
   const cs = getComputedStyle(sh);
@@ -2142,20 +2240,81 @@ function renderTide() {
 /* ======================================================================
    Expanded calendar view
    ====================================================================== */
+const calVisible = () => (P.calMode === 'day' ? 1 : 7);
+const daysBetween = (a, b) => Math.round((fromKey(b) - fromKey(a)) / 864e5);
+function calInit() {
+  if (!S.calAnchor) S.calAnchor = P.calMode === 'week' ? weekStartKey(S.day) : S.day;
+  if (!S.calStart) { S.calStart = dkey(addDays(fromKey(S.calAnchor), -60)); S.calEnd = dkey(addDays(fromKey(S.calAnchor), 60)); }
+  S.calVis = [S.calAnchor, dkey(addDays(fromKey(S.calAnchor), calVisible() - 1))];
+}
 function calRange() {
-  if (P.calMode === 'day') return [S.day];
-  if (P.calMode === 'week') { const s = fromKey(weekStartKey(S.day)); return [...Array(7)].map((_, i) => dkey(addDays(s, i))); }
-  const d = fromKey(S.day), first = new Date(d.getFullYear(), d.getMonth(), 1), s = fromKey(weekStartKey(dkey(first)));
-  return [...Array(42)].map((_, i) => dkey(addDays(s, i)));
+  if (P.calMode !== 'month') { calInit(); return S.calVis; }
+  const d = fromKey(S.day), first = new Date(d.getFullYear(), d.getMonth(), 1), s0 = fromKey(weekStartKey(dkey(first)));
+  return [...Array(42)].map((_, i) => dkey(addDays(s0, i)));
 }
 function calRangeLabel() {
-  const r = calRange(), f = k => new Intl.DateTimeFormat([], { day: 'numeric', month: 'short' }).format(fromKey(k));
-  if (P.calMode === 'day') return new Intl.DateTimeFormat([], { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).format(fromKey(S.day));
-  if (P.calMode === 'week') return `${f(r[0])} - ${f(r[6])}`;
-  return new Intl.DateTimeFormat([], { month: 'long', year: 'numeric' }).format(fromKey(S.day));
+  const f = k => new Intl.DateTimeFormat([], { day: 'numeric', month: 'short' }).format(fromKey(k));
+  if (P.calMode === 'month') return new Intl.DateTimeFormat([], { month: 'long', year: 'numeric' }).format(fromKey(S.day));
+  calInit(); const [a, b] = S.calVis;
+  return P.calMode === 'day' ? new Intl.DateTimeFormat([], { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).format(fromKey(a)) : `${f(a)} - ${f(b)}`;
 }
+/* Day / Week view: one long strip of days you can scroll sideways, smoothly, and rest on any day. */
+function calStripHTML() {
+  calInit();
+  const today = todayKey(), dis = displayEvents(), hh = 48, days = [];
+  for (let d = fromKey(S.calStart); dkey(d) <= S.calEnd; d = addDays(d, 1)) days.push(dkey(d));
+  const labels = [...Array(24)].map((_, h) => `<div class="hr-label" style="top:calc(var(--hh) * ${h})">${h ? fmtHour(h) : ''}</div>`).join('');
+  const wkd = new Intl.DateTimeFormat([], { weekday: 'short' }), mon = new Intl.DateTimeFormat([], { month: 'short' });
+  const head = days.map(k => { const d = fromKey(k); return `<button class="tl-hd ${k === S.day ? 'sel' : ''} ${k === today ? 'today' : ''}" data-action="pickDay" data-day="${k}"><b>${wkd.format(d)}</b> ${d.getDate()}${d.getDate() === 1 ? ' ' + mon.format(d) : ''}</button>`; }).join('');
+  const ad = days.map(k => dis.filter(e => e.allDay && e.start < addDays(fromKey(k), 1) && e.end > fromKey(k)));
+  const allday = ad.some(a => a.length) ? `<div class="cal-row cal-allday"><div class="cal-corner"></div>${ad.map(a => `<div>${a.map(e => `<button style="--c:${esc(e.color)}" data-action="openEvent" data-ek="${esc(e.key)}">${esc(e.title)}</button>`).join('')}</div>`).join('')}</div>` : '';
+  return `<div class="tl-scroll cal-x" data-tl="cal" data-hh="${hh}" style="--hh:${hh}px;--colw:140px"><div class="cal-inner">
+    <div class="cal-top"><div class="cal-row cal-head"><div class="cal-corner"></div>${head}</div>${allday}</div>
+    <div class="tl" style="height:calc(var(--hh) * 24 + 96px)"><div class="gutter">${labels}${days.includes(today) ? '<div class="nowpill"></div>' : ''}</div><div class="tl-cols">${days.map(k => dcolHTML(k, dis)).join('')}</div></div></div></div>`;
+}
+let calRO = null, calScrollT = null, lastCalScroll = 0, calDeferred = false;
+const calBusy = () => Date.now() - lastCalScroll < 160;   // user is mid-scroll: don't rebuild the strip under their finger
+const calColW = sc => parseFloat(sc.style.getPropertyValue('--colw')) || 140;
+function calLayout(sc) {
+  const w = Math.max(110, (((sc.clientWidth || 0) - 64) / calVisible()) || 110);
+  sc.style.setProperty('--colw', w + 'px');
+  sc.scrollLeft = daysBetween(S.calStart, S.calAnchor) * w;
+}
+function calAfterRender() {
+  if (calRO) { calRO.disconnect(); calRO = null; }
+  if (P.calMode === 'month') return;
+  const sc = $('.cal-x'); if (!sc) return;
+  calLayout(sc);
+  if (window.ResizeObserver) { calRO = new ResizeObserver(() => { const x = $('.cal-x'); if (x) calLayout(x); }); calRO.observe(sc); }
+}
+function onCalScroll(sc) {
+  const key = dkey(addDays(fromKey(S.calStart), Math.max(0, Math.round(sc.scrollLeft / calColW(sc)))));
+  if (key !== S.calAnchor) { S.calAnchor = key; S.calVis = [key, dkey(addDays(fromKey(key), calVisible() - 1))]; const el = $('#calRange'); if (el) el.textContent = calRangeLabel(); }
+  lastCalScroll = Date.now(); clearTimeout(calScrollT); calScrollT = setTimeout(onCalIdle, 170);
+}
+function onCalIdle() {   // only once scrolling has stopped: load more days near the edges, fetch their events, apply any delayed redraw
+  const sc = $('.cal-x'); if (!sc || S.view !== 'calendar') return;
+  if (calBusy()) { clearTimeout(calScrollT); calScrollT = setTimeout(onCalIdle, 170); return; }
+  const idx = Math.round(sc.scrollLeft / calColW(sc)), total = daysBetween(S.calStart, S.calEnd) + 1;
+  if (idx < 21) { S.calStart = dkey(addDays(fromKey(S.calStart), -60)); calDeferred = false; renderMain(); }
+  else if (idx + calVisible() > total - 21) { S.calEnd = dkey(addDays(fromKey(S.calEnd), 60)); calDeferred = false; renderMain(); }
+  else if (calDeferred) { calDeferred = false; renderMain(); }
+  needWeeks();
+}
+function scrollCalTo(key, smooth) {
+  if (!S.calStart || key < S.calStart || key > S.calEnd) { S.calStart = dkey(addDays(fromKey(key), -60)); S.calEnd = dkey(addDays(fromKey(key), 60)); S.calAnchor = key; renderMain(); needWeeks(); return; }
+  const sc = $('.cal-x'); if (!sc) return;
+  const left = daysBetween(S.calStart, key) * calColW(sc);
+  if (smooth && sc.scrollTo) sc.scrollTo({ left, behavior: 'smooth' }); else sc.scrollLeft = left;
+}
+function scrollCalBy(days) {
+  const sc = $('.cal-x'); if (!sc) return;
+  const d = days * calColW(sc);
+  if (sc.scrollBy) sc.scrollBy({ left: d, behavior: 'smooth' }); else sc.scrollLeft += d;
+}
+const updateCalSel = () => $$('.cal-head .tl-hd').forEach(b => b.classList.toggle('sel', b.dataset.day === S.day));
 function renderCalendar() {
-  const range = calRange(), today = todayKey();
+  const range = P.calMode === 'month' ? calRange() : null, today = todayKey();
   const side = `<aside class="calside"><h4>Calendars</h4>${S.calendars.map(c => `<label class="calrow" style="--c:${esc(c.color)}"><input type="checkbox" data-cal="${esc(c.id)}" ${isVisible(c) ? 'checked' : ''} ${blockCal() && c.id === blockCal().id ? 'disabled' : ''}><span>${esc(c.name)}</span></label>`).join('')}
     <button class="btn sm" data-action="addCal" style="margin-top:6px">${ic('plus')}Add calendar</button>
     <h4 style="margin-top:16px">Unscheduled</h4>${tops().filter(t => !t.done && (!t.due || t.due === today) && !eventsForTask(t).length).slice(0, 12).map(t => `<div class="tmini dtask" draggable="true" data-key="${esc(tk(t))}" title="Drag onto the calendar">${esc(t.title)}</div>`).join('') || '<div class="muted small">Nothing waiting.</div>'}</aside>`;
@@ -2167,10 +2326,10 @@ function renderCalendar() {
       const items = [...dis.filter(e => overlapsDay(e, k)).map(e => ({ t: e.title, c: e.color })), ...tops().filter(t => !t.done && t.due === k && !eventsForTask(t).length).map(t => ({ t: t.title, c: null }))];
       return `<div class="mcell ${fromKey(k).getMonth() !== m ? 'out' : ''} ${k === today ? 'today' : ''}" data-action="monthDay" data-day="${k}"><span class="n">${fromKey(k).getDate()}</span>${items.slice(0, 3).map(i => `<div class="it" ${i.c ? `style="--c:${esc(i.c)}"` : ''}>${esc(i.t)}</div>`).join('')}${items.length > 3 ? `<div class="more">+${items.length - 3} more</div>` : ''}</div>`;
     }).join('')}</div>`;
-  } else grid = `<div class="tl-wrap" id="calTL">${timelineHTML('cal', range, { hh: 48, head: true })}</div>`;
+  } else grid = `<div class="tl-wrap" id="calTL">${calStripHTML()}</div>`;
   return `<header class="mh"><button class="icon-btn menu-btn" data-action="toggleNav" aria-label="Menu">${ic('menu')}</button><h1>Calendar</h1><span class="grow"></span><button class="btn sm" data-action="collapseCal" title="Back to Horizon">${ic('shrink')}Back to board</button></header>
     <div class="calwrap">${side}<div class="calmain"><div class="cal-tools">
-      <button class="icon-btn" data-action="calPrev" aria-label="Previous">${ic('left')}</button><button class="btn sm" data-action="calToday">Today</button><button class="icon-btn" data-action="calNext" aria-label="Next">${ic('right')}</button><span class="range">${esc(calRangeLabel())}</span><span class="grow"></span>
+      <button class="icon-btn" data-action="calPrev" aria-label="Previous">${ic('left')}</button><button class="btn sm" data-action="calToday">Today</button><button class="icon-btn" data-action="calNext" aria-label="Next">${ic('right')}</button><span class="range" id="calRange">${esc(calRangeLabel())}</span><span class="grow"></span>
       <button class="btn sm" data-action="openCals">${ic('plug')}Connect calendar</button><button class="btn sm" data-action="openFilter">${ic('filter')}Filter</button>
       <span class="seg">${['day', 'week', 'month'].map(m => `<button class="${P.calMode === m ? 'on' : ''}" data-action="calMode" data-m="${m}">${cap(m)}</button>`).join('')}</span></div>${grid}</div></div>`;
 }
@@ -2441,7 +2600,10 @@ function settingsModal(sec) {
           <div class="lab">Default block length${ddField('dur', [15, 30, 45, 60, 90].map(x => [x, fmtDur(x)]), P.defaultDuration)}</div>
           <div class="lab">Calendar for task blocks${ddField('cal', cals.map(c => [c.id, c.name]), blockCal()?.id)}</div>`)}
         ${sec_('appearance', `<h3>Appearance</h3>
-          <div class="lab">Background image<span class="inline"><button type="button" class="btn sm" data-action="pickBg">${ic('image')}Upload image…</button><button type="button" class="btn sm ghost" data-action="clearBg">Remove</button></span><span class="muted small" style="font-weight:400">The picture shows through the whole window as mica and stays in this browser.</span></div>
+          ${(() => {
+            const row = (slot, title, hint) => `<div class="lab">${title}<span class="inline"><span class="thumb" id="thumb-${slot}" style="${slotUrl(slot) ? `background-image:url('${slotUrl(slot)}')` : ''}"></span><button type="button" class="btn sm" data-action="pickBg" data-slot="${slot}">${ic('image')}Upload image…</button><button type="button" class="btn sm ghost" data-action="clearBg" data-slot="${slot}">Remove</button></span><span class="muted small" style="font-weight:400">${hint}</span></div>`;
+            return row('light', 'Day wallpaper', 'Shown in light mode. It shows through the whole window as mica and stays in this browser.') + row('dark', 'Night wallpaper', 'Shown in dark mode. If you leave it empty, dark mode reuses the day wallpaper.') + `<p class="muted small" id="bgnote" style="margin:-6px 0 0">${bgNote()}</p>`;
+          })()}
           <h4 class="sub">Mica</h4><p class="muted small" style="margin:-4px 0 0">Strength is how much of the picture shows through. Blur is how frosted it looks. Changes apply instantly.</p>
           ${grp('Window', 'The picture behind the menu.', 'window', 'windowBlur')}
           ${grp('Main card', 'The big card with your tasks.', 'card', 'cardBlur')}
@@ -2744,6 +2906,7 @@ function animateMain() {
 }
 function navTo(v) {
   const changed = S.view !== v;
+  if (v === 'calendar') { S.calStart = null; S.calAnchor = null; }
   S.view = v; S.q = ''; S.navOpen = false;
   const s = $('#navSearch'); if (s) s.value = '';
   if (v === 'today') S.day = todayKey();
@@ -2768,7 +2931,7 @@ function fadeSwap(fn) {
 function expandCalendar() {
   if (S.view === 'calendar' || S.animating) return;
   if (innerWidth <= 900) { navTo('calendar'); return; }
-  fadeSwap(() => { S.view = 'calendar'; S.q = ''; S.navOpen = false; const sb = $('#navSearch'); if (sb) sb.value = ''; render(); });
+  fadeSwap(() => { S.view = 'calendar'; S.calStart = null; S.calAnchor = null; S.q = ''; S.navOpen = false; const sb = $('#navSearch'); if (sb) sb.value = ''; render(); });
 }
 function collapseCalendar() {
   if (S.view !== 'calendar' || S.animating) return;
@@ -2777,9 +2940,11 @@ function collapseCalendar() {
 }
 function goDay(key, { smooth = true } = {}) {
   S.day = key; delete TLSCROLL.tide;
-  if (S.view === 'horizon') { render(); centerBoardOn(key, smooth); } else render();
+  if (S.view === 'horizon') { render(); centerBoardOn(key, smooth); }
+  else if (S.view === 'calendar' && P.calMode !== 'month') { render(); scrollCalTo(P.calMode === 'week' ? weekStartKey(key) : key, smooth); }
+  else render();
 }
-function shiftDay(n) { goDay(dkey(addDays(fromKey(S.day), n))); }
+function shiftDay(n) { if (S.view === 'calendar' && P.calMode !== 'month') { scrollCalBy(n); return; } goDay(dkey(addDays(fromKey(S.day), n))); }
 function focusAdd() {
   if (S.view === 'horizon') { const f = $(`.badd[data-day="${S.day}"] input`); if (f) { f.scrollIntoView({ block: 'nearest', inline: 'center' }); f.focus(); return; } }
   if (['today', 'inbox', 'backlog'].includes(S.view)) { const f = $('.badd input'); if (f) { f.focus(); return; } }
@@ -2804,29 +2969,31 @@ const ACTIONS = {
   listDD: a => openDropdown(a, { options: [['all', 'All lists'], ...S.lists.map(l => [l.id, l.title])], value: S.listId, align: 'right', onPick: v => { S.listId = v; P.listId = v; savePrefs(); render(); } }),
   ddField: a => { const options = JSON.parse(a.dataset.opts), input = a.nextElementSibling; openDropdown(a, { options, value: input.value, minWidth: a.offsetWidth, onPick: v => { input.value = v; a.firstElementChild.textContent = options.find(o => String(o[0]) === String(v))[1]; } }); },
   bdate: a => { S.day = a.dataset.day; delete TLSCROLL.tide; render(); const anchor = $(`.bcol[data-day="${a.dataset.day}"] .bdate`) || a; datePicker(anchor, { value: S.day, onPick: k => goDay(k) }); },
-  pickDay: a => goDay(a.dataset.day), monthDay: a => { P.calMode = 'day'; savePrefs(); goDay(a.dataset.day); },
+  pickDay: a => { if (S.view === 'calendar' && P.calMode !== 'month') { S.day = a.dataset.day; updateCalSel(); } else goDay(a.dataset.day); },
+  monthDay: a => { P.calMode = 'day'; savePrefs(); S.day = a.dataset.day; S.calStart = null; S.calAnchor = a.dataset.day; render(); },
   openTask: a => { const t = taskFromEl(a); t && openTask(t); },
   toggleTask: a => { const t = taskFromEl(a); t && toggleTask(t); },
   toggleTaskEv: a => { const ev = evByKey(a.closest('.evt').dataset.ek), t = ev && taskOf(ev); t && toggleTask(t); },
   schedTask: a => { const t = taskFromEl(a); t && scheduleModal(t); },
   delTask: a => { const t = taskFromEl(a); t && deleteTask(t); },
   pickTaskDate: a => { const t = taskFromEl(a); if (t) datePicker(a, { value: t.due, onPick: k => updateTask(t, { due: k }), onClear: () => updateTask(t, { due: null }) }); },
-  openEvent: a => { if (S.justDragged) return; const ev = evByKey(a.dataset.ek); if (!ev) return; const t = taskOf(ev); t ? openTask(t) : eventModal(ev); },
+  openEvent: a => { if (S.justDragged) return; const ev = evByKey(a.dataset.ek); if (!ev) return; const t = taskOf(ev); t ? openTask(t) : openEvPanel(ev); },
   closeModal: () => closeModal(),
-  profileMenu: a => openPop(a, `<div class="menu"><div class="mh2">${esc(S.demo ? 'Demo mode (sample data)' : (P.hint || ''))}</div><button data-action="openSettings">${ic('gear')}Settings</button><button data-action="cycleTheme">${ic(P.theme === 'auto' ? 'auto' : P.theme === 'dark' ? 'moon' : 'sun')}Theme: ${esc(P.theme)}</button><button data-action="pickBg">${ic('image')}Change background</button><button data-action="openHelp">${ic('help')}Keyboard shortcuts</button><button data-action="refresh">${ic('undo')}Refresh</button><button data-action="signOut">${ic('out')}${S.demo ? 'Exit demo' : 'Sign out'}</button></div>`, { align: 'left' }),
+  profileMenu: a => openPop(a, `<div class="menu"><div class="mh2">${esc(S.demo ? 'Demo mode (sample data)' : (P.hint || ''))}</div><button data-action="openSettings">${ic('gear')}Settings</button><button data-action="cycleTheme">${ic(P.theme === 'auto' ? 'auto' : P.theme === 'dark' ? 'moon' : 'sun')}Theme: ${esc(P.theme)}</button><button data-action="pickBg">${ic('image')}Change wallpaper${isDarkTheme() ? ' (night)' : ''}</button><button data-action="openHelp">${ic('help')}Keyboard shortcuts</button><button data-action="refresh">${ic('undo')}Refresh</button><button data-action="signOut">${ic('out')}${S.demo ? 'Exit demo' : 'Sign out'}</button></div>`, { align: 'left' }),
   cycleTheme: () => { P.theme = { auto: 'light', light: 'dark', dark: 'auto' }[P.theme] || 'auto'; savePrefs(); applyTheme(); },
   openPlan: () => { S.navOpen = false; openPlan(); }, openShutdown: () => { S.navOpen = false; openShutdown(); },
   openSettings: () => settingsModal(), openHelp: () => helpModal(), openCals: () => calsModal(),
   refresh: () => refreshAll(true),
-  expandCal: () => expandCalendar(), collapseCal: () => collapseCalendar(), pickBg: () => $('#bgFile').click(), clearBg: () => clearBg(),
+  expandCal: () => expandCalendar(), collapseCal: () => collapseCalendar(), pickBg: a => { bgSlot = (a && a.dataset && a.dataset.slot) || (isDarkTheme() ? 'dark' : 'light'); $('#bgFile').click(); }, clearBg: a => clearBg(a && a.dataset && a.dataset.slot),
   toggleSubCard: a => { const p = taskFromEl(a), li = a.closest('li'); const sub = p && li && taskByKey(p.list + ':' + li.dataset.sid); sub && updateTask(sub, { done: !sub.done }); },
   tidePrev: () => shiftDay(-1), tideNext: () => shiftDay(1),
   tideZoom: a => { P.tideDays = Math.max(1, Math.min(3, P.tideDays + +a.dataset.d)); savePrefs(); render(); },
   tideClose: () => { P.tideOpen = false; S.mob = 'tasks'; savePrefs(); render(); }, tideOpen: () => { P.tideOpen = true; if (innerWidth <= 900) S.mob = 'day'; savePrefs(); render(); },
   tideDate: a => datePicker(a, { value: S.day, onPick: k => goDay(k) }),
   fab: () => eventModal(null, { start: dateAt(S.day, S.day === todayKey() ? Math.min(1380, Math.ceil(minOfDay(new Date()) / SNAP) * SNAP) : hm2min(P.workStart)) }),
-  calPrev: () => calStep(-1), calNext: () => calStep(1), calToday: () => goDay(todayKey()),
-  calMode: a => { P.calMode = a.dataset.m; savePrefs(); render(); },
+  calPrev: () => (P.calMode === 'month' ? calStep(-1) : scrollCalBy(-calVisible())), calNext: () => (P.calMode === 'month' ? calStep(1) : scrollCalBy(calVisible())),
+  calToday: () => { if (P.calMode === 'month') goDay(todayKey()); else { S.day = todayKey(); updateCalSel(); scrollCalTo(P.calMode === 'week' ? weekStartKey(todayKey()) : todayKey(), true); } },
+  calMode: a => { const prev = P.calMode; P.calMode = a.dataset.m; savePrefs(); S.calStart = null; S.calAnchor = (prev !== 'month' && P.calMode !== 'month' && S.calAnchor) ? S.calAnchor : (P.calMode === 'week' ? weekStartKey(S.day) : S.day); render(); },
   addCal: () => window.open('https://calendar.google.com/calendar/u/0/r/settings/createcalendar', '_blank', 'noopener'),
   openFilter: a => openPop(a, `<div class="menu"><label><input type="checkbox" data-filter="tasks" ${P.filters.tasks ? 'checked' : ''}>Task blocks</label><label><input type="checkbox" data-filter="events" ${P.filters.events ? 'checked' : ''}>Calendar events</label><label><input type="checkbox" data-filter="done" ${P.filters.done ? 'checked' : ''}>Completed tasks</label></div>`, { align: 'left' }),
   restoreTrash: a => { const r = P.trash.find(x => String(x.at) === a.dataset.at); r && restoreTrash(r); },
@@ -2886,6 +3053,7 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('input', e => { const r = e.target.closest && e.target.closest('[data-mica]'); if (r) { P.mica[r.dataset.mica] = +r.value; applyMica(); const o = $(`[data-micaval="${r.dataset.mica}"]`); if (o) o.textContent = r.value; } });
 document.addEventListener('change', e => { const r = e.target.closest && e.target.closest('[data-mica]'); if (r) savePrefs(); });
+document.addEventListener('change', e => { const f = e.target.closest && e.target.closest('[data-evf]'); if (f) onEvField(f); });
 document.addEventListener('change', e => {
   const t = e.target;
   const a = t.closest('[data-change]'); if (a && CHANGES[a.dataset.change]) { CHANGES[a.dataset.change](a, e); return; }
@@ -2905,6 +3073,16 @@ document.addEventListener('change', e => {
 /* ---------- forms: add task, add sub-task, comment, journal ---------- */
 document.addEventListener('submit', e => {
   const f = e.target;
+  if (f.classList.contains('ev-addp')) {
+    e.preventDefault();
+    const inp = $('input', f), ev = curEv(), em = inp.value.trim().toLowerCase();
+    if (!ev || !em) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { toast('That doesn’t look like an email address.', 'error'); return; }
+    if (ev.attendees.some(a => (a.email || '').toLowerCase() === em)) { inp.value = ''; return; }
+    const list = [...ev.attendees, { email: em }]; inp.value = '';
+    patchEvent(ev, { attendees: list }, { attendees: list.map(x => ({ email: x.email })) }, { sendUpdates: 'all' }).then(ok => ok && toast('Invitation sent to ' + em, 'success'));
+    return;
+  }
   if (f.classList.contains('badd')) {
     e.preventDefault();
     const inp = $('input', f), { title, est } = parseQuick(inp.value.trim()); if (!title) return;
@@ -2934,6 +3112,7 @@ $('#navSearch').addEventListener('input', e => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (POP) closePop(); else if (modalOpen()) closeModal();
+    else if (S.evKey) closeEvPanel();
     else if (S.navOpen) { S.navOpen = false; render(); }
     else if (S.view === 'search') { $('#navSearch').value = ''; S.q = ''; S.view = S.prevView || 'horizon'; render(); }
     return;
@@ -2957,6 +3136,7 @@ document.addEventListener('keydown', e => {
 /* ---------- scroll tracking ---------- */
 document.addEventListener('scroll', e => {
   const t = e.target;
+  if (t.classList && t.classList.contains('cal-x')) { TLSCROLL.cal = t.scrollTop; onCalScroll(t); return; }
   if (t.classList && t.classList.contains('tl-scroll')) { TLSCROLL[t.dataset.tl] = t.scrollTop; return; }
   if (t.id === 'board') { t.classList.toggle('scrolled', t.scrollLeft > 8); clearTimeout(boardScrollT); boardScrollT = setTimeout(onBoardScroll, 150); }
 }, true);
@@ -3074,6 +3254,174 @@ document.addEventListener('pointerup', e => {
 document.addEventListener('pointercancel', () => { if (DRAG) { clearTimeout(DRAG.timer); DRAG = null; render(); } });
 document.addEventListener('touchmove', e => { if (DRAG && DRAG.armed && DRAG.type === 'touch' && e.cancelable) e.preventDefault(); }, { passive: false });
 
+
+/* ======================================================================
+   Event details side panel (click an event) — editable, like Notion / Apple Calendar
+   ====================================================================== */
+const curEv = () => (S.evKey ? evByKey(S.evKey) : null);
+const fmtHm = min => { const h = Math.floor(min / 60), m = min % 60; return (h ? h + ' h' : '') + (h && m ? ' ' : '') + (m || !h ? m + ' min' : ''); };
+const REPEAT_RULES = { daily: 'RRULE:FREQ=DAILY', weekdays: 'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR', weekly: 'RRULE:FREQ=WEEKLY', monthly: 'RRULE:FREQ=MONTHLY', yearly: 'RRULE:FREQ=YEARLY' };
+const repeatLabel = r => (/BYDAY=MO,TU,WE,TH,FR/.test(r) ? 'Every weekday' : /FREQ=DAILY/.test(r) ? 'Every day' : /FREQ=WEEKLY/.test(r) ? 'Every week' : /FREQ=MONTHLY/.test(r) ? 'Every month' : /FREQ=YEARLY/.test(r) ? 'Every year' : 'Repeats');
+function remLabel(ev) {
+  const r = ev.reminders;
+  if (!r || r.useDefault) return 'Default reminders';
+  const o = (r.overrides || [])[0]; if (!o) return 'No reminders';
+  if (o.minutes === 0) return 'At time of event';
+  return o.minutes % 1440 === 0 ? `${o.minutes / 1440} day${o.minutes === 1440 ? '' : 's'} before` : o.minutes % 60 === 0 ? `${o.minutes / 60} hour${o.minutes === 60 ? '' : 's'} before` : `${o.minutes} minutes before`;
+}
+function syncTideWidth() {
+  const sh = $('#shell'), t = $('#tide'); if (!sh) return;
+  const tw = t && !t.classList.contains('closed') ? (parseFloat(t.style.width) || 0) : 0;
+  sh.style.setProperty('--tide-w', (S.evKey ? 360 : tw) + 'px');   // the panel covers the calendar sheet while it is open
+  sh.classList.toggle('ev-open', !!S.evKey);
+}
+function openEvPanel(ev) { S.evKey = ev.key; render(); }
+function closeEvPanel() { if (!S.evKey) return; S.evKey = null; render(); closePop(true); }
+function renderEvPanel() {
+  const el = $('#evpanel'); if (!el) return;
+  const ev = curEv();
+  if (S.evKey && !ev) S.evKey = null;
+  el.classList.toggle('closed', !ev);
+  if (!ev) { el.setAttribute('aria-hidden', 'true'); syncTideWidth(); return; }
+  el.removeAttribute('aria-hidden');
+  const ae = document.activeElement;
+  if (el.contains(ae) && ae.matches && ae.matches('input,textarea')) { syncTideWidth(); return; }   // don't rebuild under the cursor while typing
+  const cs = getComputedStyle($('#shell'));
+  el.style.setProperty('--wy', (parseFloat(cs.paddingTop) || 8) + 'px'); el.style.setProperty('--wr', (parseFloat(cs.paddingRight) || 10) + 'px');
+  const old = $('.ev-body', el), top = old ? old.scrollTop : 0;
+  el.innerHTML = evPanelHTML(ev);
+  const nb = $('.ev-body', el); if (nb) nb.scrollTop = top;
+  syncTideWidth();
+}
+function evPanelHTML(ev) {
+  const t = taskOf(ev), can = ev.editable && !ev.pending, ro = can ? '' : 'disabled';
+  const dur = Math.max(0, Math.round((ev.end - ev.start) / 60000));
+  const dFmt = new Intl.DateTimeFormat([], { weekday: 'short', month: 'short', day: 'numeric' });
+  const who = a => a.displayName || a.email || '?';
+  const people = (ev.attendees || []).map(a => `<div class="ev-person"><span class="avatar sm">${esc(who(a)[0].toUpperCase())}</span><span class="ev-pn">${esc(who(a))}${a.organizer ? ' <small>organizer</small>' : ''}</span><span class="ev-rs ${esc(a.responseStatus || '')}" title="${esc(a.responseStatus || 'no response yet')}"></span>${can && !a.organizer ? `<button class="icon-btn" data-action="evRmPerson" data-email="${esc(a.email)}" aria-label="Remove ${esc(a.email)}">${ic('x')}</button>` : ''}</div>`).join('');
+  const creator = (ev.creator && ev.creator.email) || (ev.organizer && ev.organizer.email) || '';
+  const calOpts = writableCals().length > 1;
+  return `
+  <div class="ev-head"><span class="ev-type">${t ? 'Task block' : 'Event'}</span><span class="grow"></span><button class="icon-btn" data-action="evMenu" aria-label="More actions">${ic('more')}</button><button class="icon-btn" data-action="evClose" aria-label="Close">${ic('x')}</button></div>
+  <div class="ev-body">
+    <input class="ev-title" data-evf="title" value="${esc(ev.noTitle ? '' : ev.title)}" placeholder="Add title" ${ro} aria-label="Event title" autocomplete="off">
+    <div class="ev-sec">
+      ${ev.allDay ? `<div class="ev-row">${ic('clock')}<span class="ev-fixed">All day</span></div>` : `<div class="ev-row">${ic('clock')}<button class="ev-pill" data-action="evStart" ${ro}>${esc(fmtTime(ev.start))}</button><span class="ev-arrow">${ic('right')}</span><button class="ev-pill" data-action="evEnd" ${ro}>${esc(fmtTime(ev.end))}</button><span class="ev-dur">${esc(fmtHm(dur))}</span></div>`}
+      <div class="ev-row ev-indent"><button class="ev-pill" data-action="evDate" ${ro}>${esc(dFmt.format(ev.start))}</button></div>
+      <div class="ev-row ev-indent ev-chips">${t ? '' : `<button class="ev-chip ${ev.allDay ? 'on' : ''}" data-action="evAllDay" ${ro}>All-day</button>`}<button class="ev-chip ${ev.recurring || ev.rrule ? 'on' : ''}" data-action="evRepeat" ${can && !ev.recurring && !ev.rrule ? '' : 'disabled'}>${ev.recurring ? 'Repeats' : ev.rrule ? esc(repeatLabel(ev.rrule)) : 'Repeat'}</button></div>
+      ${ev.recurring ? '<div class="ev-note ev-indent">Part of a repeating series. Changes here apply to this occurrence only.</div>' : ''}
+    </div>
+    ${t ? `<div class="ev-sec"><div class="ev-row">${ic('check')}<span class="ev-fixed">Task: ${esc(t.title)}</span><span class="grow"></span><button class="btn sm" data-action="evOpenTask">Open task</button></div></div>` : ''}
+    <div class="ev-sec">
+      <div class="ev-row">${ic('user')}<span class="ev-fixed muted">${creator ? 'Created by <span class="ev-who">' + esc(creator) + '</span>' : esc(ev.calName)}</span></div>
+      ${people ? `<div class="ev-people ev-indent">${people}</div>` : ''}
+      ${can ? `<form class="ev-addp ev-indent"><input type="text" placeholder="Add participant (email)" aria-label="Add participant" autocomplete="off"></form>` : ''}
+    </div>
+    <div class="ev-sec">
+      <div class="ev-row">${ic('video')}${ev.meet ? `<a class="ev-link" href="${esc(ev.meet)}" target="_blank" rel="noopener">Join Google Meet</a><span class="grow"></span><button class="icon-btn" data-action="evCopyMeet" aria-label="Copy link">${ic('copy')}</button>` : can ? `<button class="ev-pill muted" data-action="evMeet">Add Google Meet</button>` : '<span class="ev-fixed muted">No conferencing</span>'}</div>
+      <div class="ev-row">${ic('pin')}<input class="ev-in" data-evf="loc" value="${esc(ev.loc)}" placeholder="Location" ${ro} aria-label="Location" autocomplete="off"></div>
+    </div>
+    <div class="ev-sec">
+      <div class="ev-row">${ic('link')}${ev.attachments.length ? `<span class="ev-links">${ev.attachments.map(a => `<a class="ev-link" href="${esc(a.fileUrl)}" target="_blank" rel="noopener">${esc(a.title || a.fileUrl)}</a>`).join('')}</span>` : '<span class="ev-fixed muted">No attachments</span>'}</div>
+      ${ev.link ? `<div class="ev-row ev-indent"><a class="ev-link small" href="${esc(ev.link)}" target="_blank" rel="noopener">Open in Google Calendar</a></div>` : ''}
+    </div>
+    <div class="ev-sec"><textarea class="ev-desc" data-evf="desc" rows="3" placeholder="Description" ${ro} aria-label="Description">${esc(ev.desc)}</textarea></div>
+    <div class="ev-sec">
+      <div class="ev-row"><button class="ev-sw" data-action="evColor" style="--c:${esc(ev.color)}" ${ro} aria-label="Event colour"></button><button class="ev-pill" data-action="evCal" ${can && calOpts ? '' : 'disabled'}>${esc(ev.calName)}</button></div>
+      <div class="ev-row ev-indent"><button class="ev-pill" data-action="evBusy" ${ro}>${ev.free ? 'Free' : 'Busy'}</button><button class="ev-pill" data-action="evVis" ${ro}>${ev.visibility === 'public' ? 'Public' : ev.visibility === 'private' ? 'Private' : 'Default visibility'}</button></div>
+      <div class="ev-row">${ic('bell')}<button class="ev-pill ${ev.reminders && !ev.reminders.useDefault && !(ev.reminders.overrides || []).length ? 'muted' : ''}" data-action="evRem" ${ro}>${esc(remLabel(ev))}</button></div>
+    </div>
+    ${ev.editable ? '' : '<div class="ev-note">This event is read-only. You can only change events you own.</div>'}
+  </div>`;
+}
+const timeOptions = () => { const o = []; for (let m = 0; m < 1440; m += 30) o.push([min2hm(m), fmtTime(dateAt('2000-01-01', m))]); return o; };
+function applyServerEvent(ev, r) {
+  const cal = S.calendars.find(c => c.id === ev.cal); if (!cal || !r || !r.start) return;
+  const n = normEvent(r, cal);
+  ['title', 'noTitle', 'desc', 'loc', 'attendees', 'creator', 'organizer', 'meet', 'attachments', 'visibility', 'reminders', 'rrule', 'colorId', 'color', 'free', 'link', 'recurring'].forEach(k => { ev[k] = n[k]; });
+}
+async function patchEvent(ev, local, body, params) {
+  if (ev.pending) { toast('Still saving that event — try again in a second', 'info'); return false; }
+  const prev = {}; Object.keys(local).forEach(k => (prev[k] = ev[k]));
+  Object.assign(ev, local); render();
+  S.pending++;
+  try {
+    const r = await api(`${CAL_API}/calendars/${enc(ev.cal)}/events/${enc(ev.id)}`, { method: 'PATCH', params: params || { sendUpdates: 'none' }, body });
+    applyServerEvent(ev, r); render(); return r || true;
+  } catch (e) { Object.assign(ev, prev); render(); toast(`Couldn’t update “${trunc(ev.title)}”: ${e.message}`, 'error'); return false; }
+  finally { S.pending--; }
+}
+function shiftEventToDate(ev, key) {
+  if (ev.allDay) { const span = Math.max(1, daysBetween(dkey(ev.start), dkey(ev.end))), ns = fromKey(key); return { start: ns, end: addDays(ns, span) }; }
+  const ns = dateAt(key, minOfDay(ev.start)); return { start: ns, end: new Date(+ns + (ev.end - ev.start)) };
+}
+async function setAllDay(ev, on) {
+  const k = dkey(ev.start);
+  if (on) { const s0 = fromKey(k), e0 = addDays(s0, 1); return patchEvent(ev, { allDay: true, start: s0, end: e0 }, { start: { date: k, dateTime: null, timeZone: null }, end: { date: dkey(e0), dateTime: null, timeZone: null } }); }
+  const ns = dateAt(k, hm2min(P.workStart)), ne = new Date(+ns + 3600000);
+  return patchEvent(ev, { allDay: false, start: ns, end: ne }, { start: { ...isoTime(ns), date: null }, end: { ...isoTime(ne), date: null } });
+}
+async function setRepeat(ev, key) {
+  if (!REPEAT_RULES[key]) return;
+  const body = { recurrence: [REPEAT_RULES[key]] };
+  if (!ev.allDay) { body.start = isoTime(ev.start); body.end = isoTime(ev.end); }
+  const r = await patchEvent(ev, { rrule: REPEAT_RULES[key] }, body);
+  if (r) { S.loadedWeeks.clear(); toast('Repeating event created', 'success'); closeEvPanel(); needWeeks(); }
+}
+async function moveEvent(ev, dest) {
+  const cal = S.calendars.find(c => c.id === dest); if (!cal || dest === ev.cal) return;
+  const prev = { cal: ev.cal, calName: ev.calName, calColor: ev.calColor, color: ev.color, key: ev.key };
+  ev.cal = cal.id; ev.calName = cal.name; ev.calColor = cal.color; ev.color = (ev.colorId && EVENT_COLORS[ev.colorId]) ? EVENT_COLORS[ev.colorId][1] : cal.color; ev.key = cal.id + '|' + ev.id;
+  if (S.evKey === prev.key) S.evKey = ev.key; render();
+  S.pending++;
+  try { await api(`${CAL_API}/calendars/${enc(prev.cal)}/events/${enc(ev.id)}/move`, { method: 'POST', params: { destination: cal.id, sendUpdates: 'none' } }); toast('Moved to ' + cal.name, 'success', { ttl: 1800 }); }
+  catch (e) { if (S.evKey === ev.key) S.evKey = prev.key; Object.assign(ev, prev); render(); toast('Couldn’t move the event: ' + e.message, 'error'); }
+  finally { S.pending--; }
+}
+async function evDelete() {
+  const ev = curEv(); if (!ev) return;
+  const copy = { title: ev.title, start: ev.start, end: ev.end, cal: S.calendars.find(c => c.id === ev.cal), description: ev.desc, location: ev.loc, colorId: ev.colorId };
+  const timed = !ev.allDay; closeEvPanel();
+  if (await deleteEvent(ev)) toast('Event deleted', 'success', timed ? { action: { label: 'Undo', fn: () => createEvent(copy) } } : undefined);
+}
+function onEvField(f) {
+  const ev = curEv(); if (!ev || !ev.editable) return;
+  const v = f.value, k = f.dataset.evf;
+  if (k === 'title') { const t = v.trim(); if (t && t !== ev.title) updateEvent(ev, { title: t, noTitle: false }); else if (!t) f.value = ev.noTitle ? '' : ev.title; }
+  else if (k === 'loc') { if (v.trim() !== ev.loc) patchEvent(ev, { loc: v.trim() }, { location: v.trim() || null }); }
+  else if (k === 'desc') { if (v !== ev.desc) patchEvent(ev, { desc: v }, { description: v || null }); }
+}
+Object.assign(ACTIONS, {
+  evClose: () => closeEvPanel(),
+  evMenu: a => { const ev = curEv(); if (ev) openPop(a, `<div class="menu"><button data-action="evDup" ${ev.allDay || !ev.editable ? 'disabled' : ''}>${ic('copy')}Duplicate</button>${ev.link ? `<button data-action="evGcal">${ic('link')}Open in Google Calendar</button>` : ''}<button data-action="evDelete" style="color:var(--warn)" ${ev.editable ? '' : 'disabled'}>${ic('trash')}Delete</button></div>`, { align: 'right' }); },
+  evGcal: () => { const ev = curEv(); if (ev && ev.link) window.open(ev.link, '_blank', 'noopener'); },
+  evDup: () => { const ev = curEv(); if (!ev) return; createEvent({ title: ev.title, start: ev.start, end: ev.end, cal: S.calendars.find(c => c.id === ev.cal), description: ev.desc, location: ev.loc, colorId: ev.colorId }).then(n => n && openEvPanel(n)); },
+  evDelete: () => evDelete(),
+  evOpenTask: () => { const ev = curEv(), t = ev && taskOf(ev); if (t) openTask(t); },
+  evStart: a => { const ev = curEv(); openDropdown(a, { options: timeOptions(), value: min2hm(minOfDay(ev.start)), align: 'right', custom: { placeholder: 'Custom time', parse: parseClock }, onPick: v => { const ns = dateAt(dkey(ev.start), hm2min(v)); updateEvent(ev, { start: ns, end: new Date(+ns + (ev.end - ev.start)) }); } }); },
+  evEnd: a => { const ev = curEv(); openDropdown(a, { options: timeOptions(), value: min2hm(minOfDay(ev.end)), align: 'right', custom: { placeholder: 'Custom time', parse: parseClock }, onPick: v => { const ne = dateAt(dkey(ev.end), hm2min(v)); if (ne <= ev.start) { toast('The end has to be after the start.', 'error'); return; } updateEvent(ev, { end: ne }); } }); },
+  evDate: a => { const ev = curEv(); datePicker(a, { value: dkey(ev.start), align: 'right', onPick: k => updateEvent(ev, shiftEventToDate(ev, k)) }); },
+  evAllDay: () => { const ev = curEv(); if (ev) setAllDay(ev, !ev.allDay); },
+  evRepeat: a => { const ev = curEv(); openDropdown(a, { options: [['daily', 'Every day'], ['weekdays', 'Every weekday'], ['weekly', 'Every week'], ['monthly', 'Every month'], ['yearly', 'Every year']], value: '', align: 'right', onPick: v => setRepeat(ev, v) }); },
+  evRmPerson: a => { const ev = curEv(); if (!ev) return; const list = ev.attendees.filter(x => x.email !== a.dataset.email); patchEvent(ev, { attendees: list }, { attendees: list.map(x => ({ email: x.email })) }, { sendUpdates: 'all' }); },
+  evMeet: async () => { const ev = curEv(); if (!ev) return; const r = await patchEvent(ev, {}, { conferenceData: { createRequest: { requestId: uid(), conferenceSolutionKey: { type: 'hangoutsMeet' } } } }, { sendUpdates: 'none', conferenceDataVersion: 1 }); if (r && ev.meet) toast('Google Meet link added', 'success', { ttl: 2000 }); },
+  evCopyMeet: () => { const ev = curEv(); if (ev && ev.meet) { try { navigator.clipboard.writeText(ev.meet); } catch (e) {} toast('Meet link copied', 'success', { ttl: 1500 }); } },
+  evColor: a => {
+    const ev = curEv(); if (!ev) return;
+    openPop(a, `<div class="swatches"><button class="sw def ${ev.colorId ? '' : 'on'}" data-c="" style="--c:${esc(ev.calColor)}" title="Calendar colour"></button>${Object.entries(EVENT_COLORS).map(([id, [n, hex]]) => `<button class="sw ${ev.colorId === id ? 'on' : ''}" data-c="${id}" style="--c:${hex}" title="${n}" aria-label="${n}"></button>`).join('')}</div>`, { align: 'left', onMount(el) {
+      el.addEventListener('click', e => { const b = e.target.closest('.sw'); if (!b) return; const id = b.dataset.c; closePop(); patchEvent(ev, { colorId: id, color: id ? EVENT_COLORS[id][1] : ev.calColor }, { colorId: id || null }); });
+    } });
+  },
+  evCal: a => { const ev = curEv(); openDropdown(a, { options: writableCals().map(c => [c.id, c.name]), value: ev.cal, align: 'left', onPick: v => moveEvent(ev, v) }); },
+  evBusy: a => { const ev = curEv(); openDropdown(a, { options: [['busy', 'Busy'], ['free', 'Free']], value: ev.free ? 'free' : 'busy', align: 'left', onPick: v => patchEvent(ev, { free: v === 'free' }, { transparency: v === 'free' ? 'transparent' : 'opaque' }) }); },
+  evVis: a => { const ev = curEv(); openDropdown(a, { options: [['default', 'Default visibility'], ['public', 'Public'], ['private', 'Private']], value: ev.visibility, align: 'left', onPick: v => patchEvent(ev, { visibility: v }, { visibility: v }) }); },
+  evRem: a => {
+    const ev = curEv();
+    openDropdown(a, { options: [['default', 'Default reminders'], ['none', 'No reminders'], ['0', 'At time of event'], ['5', '5 minutes before'], ['10', '10 minutes before'], ['15', '15 minutes before'], ['30', '30 minutes before'], ['60', '1 hour before'], ['1440', '1 day before']], value: '', align: 'left',
+      onPick: v => { const r = v === 'default' ? { useDefault: true } : v === 'none' ? { useDefault: false, overrides: [] } : { useDefault: false, overrides: [{ method: 'popup', minutes: +v }] }; patchEvent(ev, { reminders: r }, { reminders: r }); } });
+  }
+});
+
 /* ======================================================================
    Loading, refresh, boot
    ====================================================================== */
@@ -3130,27 +3478,50 @@ async function probeBg(blob) {
 function updateNavTone() {
   const r = document.documentElement;
   if (!r.classList.contains('has-bg') || !bgProbe) { r.removeAttribute('data-navtone'); return; }
-  const dark = P.theme === 'dark' || (P.theme === 'auto' && matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+  const dark = isDarkTheme();
   const a = 0.9 - 0.65 * P.mica.window / 100, tintV = dark ? 0.09 : 0.965;
   const v = bgProbe.lum * (1 - a) + tintV * a;                        // the tint is composited over the picture on screen
   const eff = v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);   // → relative luminance of what the menu really sits on
   const darkText = (eff + 0.05) / 0.055 > 0.95 / (eff + 0.05);       // which of near-black / near-white text contrasts more
   r.dataset.navtone = darkText ? 'dark' : 'light';
 }
-async function applyBg(blob) {
-  if (blob === undefined) blob = await idb.get('bg');
+/* Two wallpapers: "day" (light mode) and "night" (dark mode). Night falls back to the day picture if it has none. */
+let bgCache = null, bgSlot = 'light', bgBusy = Promise.resolve();
+const thumbUrls = {};
+const slotKey = slot => (slot === 'dark' ? 'bgDark' : 'bg');
+const isDarkTheme = () => P.theme === 'dark' || (P.theme === 'auto' && !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches));
+async function loadBgCache() { if (!bgCache) bgCache = { light: await idb.get('bg'), dark: await idb.get('bgDark') }; return bgCache; }
+function slotUrl(slot) {
+  const b = bgCache && bgCache[slot]; if (!b) return '';
+  if (!thumbUrls[slot] || thumbUrls[slot].blob !== b) { if (thumbUrls[slot]) URL.revokeObjectURL(thumbUrls[slot].url); thumbUrls[slot] = { blob: b, url: URL.createObjectURL(b) }; }
+  return thumbUrls[slot].url;
+}
+function bgNote() {
+  const c = bgCache || {};
+  if (isDarkTheme()) return c.dark ? 'Dark mode is showing your night wallpaper.' : c.light ? 'Dark mode is reusing your day wallpaper.' : 'No wallpaper set.';
+  return c.light ? 'Light mode is showing your day wallpaper.' : 'No day wallpaper set.';
+}
+function refreshBgThumbs() {
+  ['light', 'dark'].forEach(sl => { const t = $('#thumb-' + sl); if (t) t.style.backgroundImage = slotUrl(sl) ? `url("${slotUrl(sl)}")` : ''; });
+  const n = $('#bgnote'); if (n) n.textContent = bgNote();
+}
+function applyBg() { bgBusy = bgBusy.then(_applyBg, _applyBg); return bgBusy; }
+async function _applyBg() {
+  await loadBgCache();
+  const blob = (isDarkTheme() ? (bgCache.dark || bgCache.light) : bgCache.light) || null;
   const r = document.documentElement;
+  if (blob === bgBlob) { updateNavTone(); refreshBgThumbs(); return; }   // already showing it
   if (blob) {
     const old = bgUrl; bgUrl = URL.createObjectURL(blob);
     r.style.setProperty('--bg-img', `url("${bgUrl}")`); r.classList.add('has-bg');
     if (old) setTimeout(() => URL.revokeObjectURL(old), 1000);
     bgBlob = blob; await probeBg(blob);
   } else { r.classList.remove('has-bg'); bgBlob = null; bgProbe = null; }
-  updateNavTone();
+  updateNavTone(); refreshBgThumbs();
 }
 let resizeT = null;
 window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (bgBlob) probeBg(bgBlob).then(updateNavTone); }, 300); });
-async function setBgFile(file) {
+async function setBgFile(file, slot = 'light') {
   if (!file || !file.type.startsWith('image/')) { toast('Please choose an image file', 'error'); return; }
   try {
     const bmp = await (window.createImageBitmap ? createImageBitmap(file) : new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = URL.createObjectURL(file); }));
@@ -3158,12 +3529,19 @@ async function setBgFile(file) {
     const c = document.createElement('canvas'); c.width = Math.round(w * sc); c.height = Math.round(h * sc);
     c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
     const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.88));
-    const saved = await idb.set('bg', blob);
-    await applyBg(blob);
-    toast(saved ? 'Background updated' : 'Background applied for this session (your browser blocked saving it)', saved ? 'success' : 'info');
+    await loadBgCache();
+    const saved = await idb.set(slotKey(slot), blob);
+    bgCache[slot] = blob; await applyBg(); refreshBgThumbs();
+    const name = slot === 'dark' ? 'Night wallpaper' : 'Day wallpaper';
+    toast(saved ? name + ' updated' : name + ' applied for this session (your browser blocked saving it)', saved ? 'success' : 'info');
   } catch (e) { toast('Couldn’t use that image: ' + (e.message || 'unsupported file'), 'error'); }
 }
-async function clearBg() { await idb.del('bg'); await applyBg(null); toast('Background removed', 'success'); }
+async function clearBg(slot) {
+  slot = slot || (isDarkTheme() ? 'dark' : 'light');
+  await loadBgCache(); await idb.del(slotKey(slot)); bgCache[slot] = null;
+  await applyBg(); refreshBgThumbs();
+  toast((slot === 'dark' ? 'Night' : 'Day') + ' wallpaper removed', 'success');
+}
 
 /* ---------- new tasks created in Google get pulled into view ---------- */
 function revealTask(t) {
@@ -3206,7 +3584,8 @@ function boot() {
   loadPrefs(); applyTheme();
   $('#icSearch').innerHTML = ic('search');
   applyMica(); applyBg();
-  $('#bgFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) setBgFile(f); });
+  try { const mq = matchMedia('(prefers-color-scheme: dark)'), on = () => { if (P.theme === 'auto') applyBg(); }; if (mq.addEventListener) mq.addEventListener('change', on); else if (mq.addListener) mq.addListener(on); } catch (e) {}
+  $('#bgFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) setBgFile(f, bgSlot); });
   S.listId = P.listId || 'all';
   if (/[?&]reset(=|&|$)/.test(location.search)) { resetAppData(true); return; }
   const linkP = linkParams(); if (linkP) { runLinkPage(linkP); return; }   // opened from the desktop app: just sign in and hand over   // dayplan.html?reset=1 wipes everything
