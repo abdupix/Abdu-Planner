@@ -1,4 +1,3 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <!--
 ================================================================================
 AbduPlan — personal daily planner on top of Google Calendar + Google Tasks
@@ -838,8 +837,9 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
   .evpanel.closed{display:none!important}
   .evpanel:not(.closed){display:flex!important;inset:0 0 calc(58px + env(safe-area-inset-bottom,0px)) 0;right:0;width:auto!important;z-index:9}
 }
-.ev-desc-view{font-size:14px;min-height:40px;padding:2px 0;cursor:default;overflow-wrap:anywhere;border-radius:var(--r-sm)}
-.ev-desc-view.can{cursor:text}.ev-desc-view.can:hover{background:var(--surface-2)}
+/* view and editor share one box so nothing shifts when you click in */
+.ev-desc-view{font-size:14px;min-height:64px;padding:6px 8px;margin:0 -8px;cursor:default;overflow-wrap:anywhere;border-radius:var(--r-sm);background:transparent;transition:background .15s}
+.ev-desc-view.can{cursor:text}.ev-desc-view.can:hover{background:color-mix(in srgb,var(--ink) 3.5%,transparent)}
 .ev-desc-view.ph{color:var(--ink-3)}
 .ev-desc-view a{color:var(--accent)}.ev-desc-view code{background:var(--surface-2);padding:1px 5px;border-radius:var(--r-sm);font-size:12.5px}
 .ev-desc-view h1,.ev-desc-view h2,.ev-desc-view h3,.ev-desc-view h4{margin:6px 0 2px;font-size:15px}
@@ -854,9 +854,14 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
 .shell.nav-collapsed .nav-foot{padding:8px 0 2px}
 .shell.nav-collapsed .profile{justify-content:center;padding:8px 0;gap:0}
 @media (max-width:900px){.shell.nav-collapsed .ni{justify-content:flex-start;padding:8px 10px;gap:11px}.shell.nav-collapsed .profile{justify-content:flex-start;padding:8px;gap:9px}.shell.nav-collapsed .nav-head{flex-direction:row;justify-content:flex-start}}
-.ev-desc-ed{outline:none;cursor:text;background:var(--surface-2)!important;padding:8px 10px;min-height:110px}
+.ev-desc-ed{outline:none;cursor:text;background:color-mix(in srgb,var(--ink) 4.5%,transparent)!important}
 .ev-desc-ed:empty::before{content:attr(data-ph);color:var(--ink-3)}
 .ev-desc-view div{min-height:1.4em}
+@media (min-width:901px){
+  .tide.evpanel{top:var(--ev-top,8px);bottom:var(--ev-bot,10px);right:var(--ev-right,10px)}
+  .calwrap{transition:padding-right .5s var(--ease)}
+  .shell.ev-open[data-view="calendar"] .calwrap{padding-right:calc(var(--tide-w) + var(--ev-gap,0px))}
+}
 </style>
 </head>
 <body>
@@ -3308,7 +3313,7 @@ const renderDesc = raw => cleanHtml(HTML_RE.test(raw) ? raw : mdToHtml(raw));
 function descEditor(ev, host) {
   const ed = document.createElement('div');
   ed.className = 'ev-desc-view ev-desc-ed can'; ed.contentEditable = 'true'; ed.spellcheck = true;
-  ed.dataset.ph = 'Description. Try # heading, - bullet, 1. list, **bold**, *italic*';
+  ed.dataset.ph = 'Description';
   ed.setAttribute('role', 'textbox'); ed.setAttribute('aria-multiline', 'true'); ed.setAttribute('aria-label', 'Description');
   ed.innerHTML = ev.desc ? renderDesc(ev.desc) : '';
   host.replaceWith(ed);
@@ -3370,6 +3375,16 @@ document.addEventListener('mousedown', e => {   // click anywhere outside the ev
   if (panel && ae && panel.contains(ae) && ae.blur) ae.blur();   // commit any text being edited before the panel goes away
   closeEvPanel();
 }, true);
+/* In the full calendar the sidebar lines up with the calendar card (same top and bottom), and the card slides over to make room */
+function positionEvPanel() {
+  const el = $('#evpanel'); if (!el) return;
+  const cs = getComputedStyle($('#shell')), cm = innerWidth > 900 && S.view === 'calendar' ? $('.calmain') : null;
+  let top = parseFloat(cs.paddingTop) || 8, bot = parseFloat(cs.paddingBottom) || 10, right = parseFloat(cs.paddingRight) || 10;
+  if (cm) { const r = cm.getBoundingClientRect(); if (r.height > 50) { const sr = $('#shell').getBoundingClientRect(); top = r.top - sr.top; bot = sr.bottom - r.bottom; right = sr.right - $('#canvas').getBoundingClientRect().right + 16; } }
+  el.style.setProperty('--ev-top', top + 'px'); el.style.setProperty('--ev-bot', bot + 'px'); el.style.setProperty('--ev-right', right + 'px');
+  el.style.setProperty('--wy', top + 'px'); el.style.setProperty('--wr', right + 'px');
+  $('#shell').style.setProperty('--ev-gap', Math.max(0, right - (parseFloat(cs.paddingRight) || 10)) + 'px');
+}
 function renderEvPanel() {
   const el = $('#evpanel'); if (!el) return;
   const ev = curEv();
@@ -3379,8 +3394,7 @@ function renderEvPanel() {
   el.removeAttribute('aria-hidden');
   const ae = document.activeElement;
   if (el.contains(ae) && ae.matches && ae.matches('input,textarea,[contenteditable="true"]')) { syncTideWidth(); return; }   // don't rebuild under the cursor while typing
-  const cs = getComputedStyle($('#shell'));
-  el.style.setProperty('--wy', (parseFloat(cs.paddingTop) || 8) + 'px'); el.style.setProperty('--wr', (parseFloat(cs.paddingRight) || 10) + 'px');
+  positionEvPanel();
   const old = $('.ev-body', el), top = old ? old.scrollTop : 0;
   el.innerHTML = evPanelHTML(ev);
   const nb = $('.ev-body', el); if (nb) nb.scrollTop = top;
@@ -3410,7 +3424,7 @@ function evPanelHTML(ev) {
       ${people ? `<div class="ev-people ev-indent">${people}</div>` : ''}
       ${can ? `<form class="ev-addp ev-indent"><input type="text" placeholder="Add participant (email)" aria-label="Add participant" autocomplete="off"></form>` : ''}
     </div>
-    <div class="ev-sec"><div class="ev-desc-view ${ev.desc ? '' : 'ph'} ${can ? 'can' : ''}" data-action="evEditDesc" ${can ? 'tabindex="0" role="button"' : ''} aria-label="Description">${ev.desc ? renderDesc(ev.desc) : 'Description (supports HTML and Markdown)'}</div>
+    <div class="ev-sec"><div class="ev-desc-view ${ev.desc ? '' : 'ph'} ${can ? 'can' : ''}" data-action="evEditDesc" ${can ? 'tabindex="0" role="button"' : ''} aria-label="Description">${ev.desc ? renderDesc(ev.desc) : 'Description'}</div>
       ${ev.link ? `<div class="ev-row ev-indent"><a class="ev-link small" href="${esc(ev.link)}" target="_blank" rel="noopener">Open in Google Calendar</a></div>` : ''}
     </div>
     <div class="ev-sec">
@@ -3611,7 +3625,7 @@ async function _applyBg() {
   updateNavTone(); refreshBgThumbs();
 }
 let resizeT = null;
-window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (bgBlob) probeBg(bgBlob).then(updateNavTone); }, 300); });
+window.addEventListener('resize', () => { if (S.evKey) positionEvPanel(); clearTimeout(resizeT); resizeT = setTimeout(() => { if (bgBlob) probeBg(bgBlob).then(updateNavTone); }, 300); });
 async function setBgFile(file, slot = 'light') {
   if (!file || !file.type.startsWith('image/')) { toast('Please choose an image file', 'error'); return; }
   try {
@@ -3725,5 +3739,3 @@ boot();
 </script>
 </body>
 </html>
-
-</body></html>
