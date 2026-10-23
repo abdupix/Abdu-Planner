@@ -31,7 +31,7 @@ in the task's notes as marker lines — visible in the Google Tasks app too):
  • Google Tasks stores a due DATE only (no time). Times live on the calendar block.
  • Focus opens a small always-on-top timer window (Chrome/Edge Document Picture-in-Picture; other browsers get a popup).
  • "Try with sample data" on the sign-in screen runs the whole app on made-up data, with no Google account.
- • Preferences, journal entries, a local Trash (deleted tasks) and a running timer
+ • Preferences, shutdown reflections, a local Trash (deleted tasks) and a running timer
    are kept in localStorage. Guests of events you move are not emailed.
 ================================================================================
 -->
@@ -247,17 +247,6 @@ html.has-bg .nav-search input{background:var(--glass-hi)}
 .cap-card .bar{flex:1}
 .bar{display:flex;height:10px;border-radius:6px;overflow:hidden;background:var(--surface-2)}
 .bar i{display:block;height:100%;transition:width .5s var(--ease)}.b-busy{background:var(--ink-3);opacity:.5}.b-plan{background:var(--accent)}.b-over{background:var(--warn)}
-.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
-.stat{border-radius:var(--r-card);padding:14px 16px;background:var(--surface);box-shadow:var(--sh-sm)}
-.stat b{display:block;font-size:22px;letter-spacing:-.02em}
-.chart{display:flex;align-items:flex-end;gap:10px;height:130px;padding:12px 8px;border-radius:var(--r-card);margin-bottom:16px;background:var(--surface);box-shadow:var(--sh-sm)}
-.chart div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;font-size:11px;color:var(--ink-2)}
-.chart i{display:block;width:70%;background:var(--accent);border-radius:6px 6px 2px 2px;min-height:3px}
-.tip{padding:11px 14px;border-radius:var(--r-card);background:var(--accent-soft);margin-bottom:8px}
-.jform{display:flex;flex-direction:column;gap:10px;margin-bottom:22px;padding:16px;border-radius:var(--r-card);background:var(--surface);box-shadow:var(--sh-sm)}
-.jform textarea{background:var(--surface-2)}
-.jentry{padding:12px 4px}
-.jentry small{color:var(--ink-3)}
 
 /* ---------- tide (right) panel: raised above the canvas ---------- */
 .tide{flex:none;display:flex;flex-direction:column;background:var(--surface);border-radius:var(--r-ctl);box-shadow:var(--sh-lg);overflow:hidden;position:relative;min-height:0;
@@ -492,7 +481,7 @@ html.has-bg .nav-search input{background:var(--glass-hi)}
 /* ===== v3: Windows 11 geometry, mica, hidden scrollbars, flyout dropdowns, pomodoro ===== */
 *{scrollbar-width:none;-ms-overflow-style:none}
 *::-webkit-scrollbar{display:none;width:0;height:0}
-h1,h2,h3,.bday,.tb-date,.tm-title input,.logo b,.range,.stat b,.pomo-task{font-family:var(--font-head)}
+h1,h2,h3,.bday,.tb-date,.tm-title input,.logo b,.range,.pomo-task{font-family:var(--font-head)}
 .mh h1{font-weight:600;font-size:22px;letter-spacing:-.01em}
 .bday{font-weight:600}
 .tb-date{font-weight:600;letter-spacing:-.01em}
@@ -848,6 +837,14 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
   .evpanel.closed{display:none!important}
   .evpanel:not(.closed){display:flex!important;inset:0 0 calc(58px + env(safe-area-inset-bottom,0px)) 0;right:0;width:auto!important;z-index:9}
 }
+.ev-desc-view{font-size:14px;min-height:40px;padding:2px 0;cursor:default;overflow-wrap:anywhere;border-radius:var(--r-sm)}
+.ev-desc-view.can{cursor:text}.ev-desc-view.can:hover{background:var(--surface-2)}
+.ev-desc-view.ph{color:var(--ink-3)}
+.ev-desc-view a{color:var(--accent)}.ev-desc-view code{background:var(--surface-2);padding:1px 5px;border-radius:var(--r-sm);font-size:12.5px}
+.ev-desc-view h1,.ev-desc-view h2,.ev-desc-view h3,.ev-desc-view h4{margin:6px 0 2px;font-size:15px}
+.ev-desc-view ul,.ev-desc-view ol{margin:2px 0;padding-left:22px}.ev-desc-view blockquote{margin:2px 0;padding-left:10px;border-left:3px solid var(--grid);color:var(--ink-2)}
+.ev-desc-view>br:last-child{display:none}
+.ev-desc{min-height:110px;resize:none;overflow:hidden;background:var(--surface-2)!important;border-radius:var(--r-ctl);padding:8px 10px!important;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px!important}
 </style>
 </head>
 <body>
@@ -977,9 +974,6 @@ const ICONS = {
   search:'<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/>',
   inbox:'<path d="M4 13l2.5-7h11L20 13v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5z"/><path d="M4 13h4.5a3.5 3.5 0 007 0H20"/>',
   today:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/>',
-  backlog:'<path d="M12 4l8 4-8 4-8-4 8-4z"/><path d="M4 12l8 4 8-4M4 16l8 4 8-4"/>',
-  journal:'<path d="M6 4h11a2 2 0 012 2v14H8a2 2 0 01-2-2V4z"/><path d="M6 18a2 2 0 012-2h11M10 8h6"/>',
-  coach:'<path d="M12 3l2.2 5.3L20 9l-4.3 3.9L17 19l-5-3-5 3 1.3-6.1L4 9l5.8-.7L12 3z"/>',
   horizon:'<path d="M3 17h18M6.5 17a5.5 5.5 0 0111 0M12 6v2.5M5.5 9.5l1.6 1.6M18.5 9.5l-1.6 1.6"/>',
   hash:'<path d="M5 9h14M5 15h14M10 4L8 20M16 4l-2 16"/>',
   flag:'<path d="M6 21V4M6 5h11l-2 4 2 4H6"/>',
@@ -1943,12 +1937,11 @@ function render() {
   $$('.mobtabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.mob));
   renderNav(); renderMain(); renderTide(); renderEvPanel(); renderTimerPill(); updateNow(); needWeeks();
 }
-const NAV = [['horizon', 'Horizon', 'horizon'], ['inbox', 'Inbox', 'inbox'], ['today', 'Today', 'today'], ['backlog', 'Backlog', 'backlog'], ['journal', 'Journal', 'journal'], ['coach', 'Coach', 'coach']];
-function inboxTasks() { const l = S.lists[0]?.id; return tops().filter(t => !t.done && !t.due && t.list === l); }
+const NAV = [['horizon', 'Horizon', 'horizon'], ['today', 'Today', 'today']];
 function renderNav() {
   const today = todayKey();
   const nToday = tops().filter(t => !t.done && t.due && t.due <= today).length;
-  const cnt = { inbox: inboxTasks().length, today: nToday };
+  const cnt = { today: nToday };
   const item = ([v, l, i]) => `<button class="ni ${S.view === v ? 'on' : ''}" data-action="nav" data-view="${v}" data-drop="${v}" title="${l}">${ic(i)}<span class="lbl">${l}</span>${v === 'horizon' && S.view === 'horizon' ? '<i class="dot"></i>' : (cnt[v] ? `<span class="cnt">${cnt[v]}</span>` : '')}</button>`;
   $('#navItems').innerHTML = NAV.map(item).join('') +
     `<div style="height:10px"></div><button class="ni" data-action="openPlan" title="Plan today">${ic('sun')}<span class="lbl">Plan today</span></button><button class="ni" data-action="openShutdown" title="Shut down">${ic('moon')}<span class="lbl">Shut down</span></button>` +
@@ -2000,9 +1993,7 @@ function renderMain() {
   if (S.loading) html = mh('Loading…') + '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
   else if (S.view === 'search') html = renderSearch();
   else if (S.view === 'horizon') html = renderBoard();
-  else if (S.view === 'today' || S.view === 'inbox' || S.view === 'backlog') html = renderList(S.view);
-  else if (S.view === 'journal') html = renderJournal();
-  else if (S.view === 'coach') html = renderCoach();
+  else if (S.view === 'today') html = renderList();
   else if (S.view === 'trash') html = renderTrash();
   else if (S.view === 'calendar') html = renderCalendar();
   main.innerHTML = html;
@@ -2086,10 +2077,10 @@ function onBoardScroll() {
 
 /* ---------- list views ---------- */
 function addForm(day, ph = '+ Add task') { return `<form class="badd" data-day="${day}" style="margin-bottom:12px"><input type="text" placeholder="${ph}" aria-label="${esc(ph)}" autocomplete="off"></form>`; }
-function renderList(kind) {
+function renderList() {
   const today = todayKey();
-  let body = '', title = cap(kind), right = kind === 'inbox' ? '' : listSelect();
-  if (kind === 'today') {
+  let body = '';
+  {
     const open = tops().filter(t => listOk(t) && !t.done && t.due === today), od = tops().filter(t => listOk(t) && !t.done && t.due && t.due < today);
     const done = tops().filter(t => listOk(t) && t.done && (t.due === today || (t.completedAt && dkey(new Date(t.completedAt)) === today)));
     const st = dayStats(today), total = Math.max(st.work, st.busy + st.planned) || 1, within = Math.min(st.planned, st.avail);
@@ -2098,44 +2089,11 @@ function renderList(kind) {
       <span class="small ${st.over ? 'warn' : 'muted'}" style="${st.over ? 'color:var(--warn);font-weight:600' : ''}">${st.over ? 'Over by ' + fmtDur(st.over) : st.count + ' task' + (st.count === 1 ? '' : 's')}</span></div>` +
       addForm(today) + `<div class="stack">${od.length ? `<div class="grp-l warn"><span>Overdue</span></div>${od.map(t => card(t, { overdue: true, day: today })).join('')}` : ''}${open.map(t => card(t, { day: today, showList: true })).join('')}${done.map(t => card(t, { day: today })).join('')}</div>`;
     if (!od.length && !open.length && !done.length) body = body.replace('</div></div>', '</div></div>') + `<div class="empty"><b>Nothing planned for today</b>Add a task above or use Plan today.</div>`;
-  } else {
-    const ts = kind === 'inbox' ? inboxTasks() : tops().filter(t => listOk(t) && !t.done && !t.due);
-    body = addForm('', kind === 'inbox' ? '+ Capture a task' : '+ Add to backlog') + `<div class="stack">${ts.map(t => card(t, { showList: kind === 'backlog' })).join('')}</div>` +
-      (ts.length ? '' : `<div class="empty"><b>${kind === 'inbox' ? 'Inbox zero' : 'Backlog is clear'}</b>${kind === 'inbox' ? 'New undated tasks from your default list land here.' : 'Tasks without a due date show up here. Drag them to a day or the calendar.'}</div>`);
   }
-  return mh(title, right) + `<div class="pagescroll"><div class="page-inner">${body}</div></div>`;
+  return mh('Today', listSelect()) + `<div class="pagescroll"><div class="page-inner">${body}</div></div>`;
 }
 
-/* ---------- journal / coach / trash / search ---------- */
-function renderJournal() {
-  const today = todayKey();
-  const keys = Object.keys(P.reflections).filter(k => P.reflections[k] && k !== today).sort().reverse();
-  return mh('Journal') + `<div class="pagescroll"><div class="page-inner">
-    <form class="jform" id="jform"><label class="muted">${esc(fmtLong(today))}</label><textarea id="jtext" rows="4" placeholder="What went well? What would you change tomorrow?">${esc(P.reflections[today] || '')}</textarea><div><button class="btn accent" type="submit">Save entry</button></div></form>
-    ${keys.length ? keys.map(k => `<div class="jentry"><small>${esc(fmtLong(k))}</small><div>${esc(P.reflections[k])}</div></div>`).join('') : '<div class="empty"><b>No earlier entries</b>Entries from the shutdown ritual show up here.</div>'}</div></div>`;
-}
-function renderCoach() {
-  const days = [...Array(7)].map((_, i) => dkey(addDays(new Date(), i - 6)));
-  const doneBy = days.map(k => tops().filter(t => t.done && t.completedAt && dkey(new Date(t.completedAt)) === k));
-  const counts = doneBy.map(a => a.length), total = counts.reduce((a, b) => a + b, 0), max = Math.max(1, ...counts);
-  const spent = doneBy.flat().reduce((a, t) => a + (t.actual || t.est), 0);
-  const both = tops().filter(t => t.done && t.est && t.actual);
-  const ratio = both.length ? both.reduce((a, t) => a + t.actual / t.est, 0) / both.length : 0;
-  const today = todayKey(), st = dayStats(today), od = tops().filter(t => !t.done && t.due && t.due < today).length;
-  const best = counts.indexOf(Math.max(...counts));
-  const tips = [];
-  if (od) tips.push(`${od} overdue task${od > 1 ? 's' : ''}: pull them into a day or send them to Backlog when you plan today.`);
-  if (st.over) tips.push(`Today is over capacity by ${fmtDur(st.over)}. Move something to tomorrow before you start.`);
-  if (st.unest) tips.push(`${st.unest} task${st.unest > 1 ? 's' : ''} today ${st.unest > 1 ? 'have' : 'has'} no estimate, so capacity is understated. Add ~25m style estimates.`);
-  if (ratio > 1.25) tips.push(`You take about ${ratio.toFixed(1)}× your estimates. Pad them a little.`);
-  else if (ratio && ratio < 0.8) tips.push(`You finish in about ${ratio.toFixed(1)}× your estimates. You can plan more per day.`);
-  if (total && counts[best] > 0) tips.push(`Your best day this week was ${wkdayLong(days[best])} (${counts[best]} done).`);
-  if (!tips.length) tips.push('Finish a few tasks and log time with the timer. Coach will have more to say.');
-  return mh('Coach') + `<div class="pagescroll"><div class="page-inner">
-    <div class="statgrid"><div class="stat"><b>${total}</b><span class="muted">done, last 7 days</span></div><div class="stat"><b>${fmtDur(spent)}</b><span class="muted">time on finished tasks</span></div><div class="stat"><b>${ratio ? ratio.toFixed(1) + '×' : '–'}</b><span class="muted">actual vs estimate</span></div></div>
-    <div class="chart" role="img" aria-label="Tasks completed per day">${days.map((k, i) => `<div><i style="height:${counts[i] / max * 80}%"></i><span>${new Intl.DateTimeFormat([], { weekday: 'short' }).format(fromKey(k))}</span></div>`).join('')}</div>
-    ${tips.map(t => `<div class="tip">${esc(t)}</div>`).join('')}</div></div>`;
-}
+/* ---------- trash / search ---------- */
 function renderTrash() {
   return mh('Trash', P.trash.length ? `<button class="btn sm" data-action="emptyTrash">Empty trash</button>` : '') + `<div class="pagescroll"><div class="page-inner">
     <p class="muted small">Google Tasks has no trash, so Dayplan keeps the last 50 deleted tasks in this browser.</p>
@@ -2947,7 +2905,7 @@ function goDay(key, { smooth = true } = {}) {
 function shiftDay(n) { if (S.view === 'calendar' && P.calMode !== 'month') { scrollCalBy(n); return; } goDay(dkey(addDays(fromKey(S.day), n))); }
 function focusAdd() {
   if (S.view === 'horizon') { const f = $(`.badd[data-day="${S.day}"] input`); if (f) { f.scrollIntoView({ block: 'nearest', inline: 'center' }); f.focus(); return; } }
-  if (['today', 'inbox', 'backlog'].includes(S.view)) { const f = $('.badd input'); if (f) { f.focus(); return; } }
+  if (S.view === 'today') { const f = $('.badd input'); if (f) { f.focus(); return; } }
   navTo('horizon'); setTimeout(() => { const f = $(`.badd[data-day="${S.day}"] input`); f && f.focus(); }, 60);
 }
 
@@ -3070,7 +3028,7 @@ document.addEventListener('change', e => {
   }
 });
 
-/* ---------- forms: add task, add sub-task, comment, journal ---------- */
+/* ---------- forms: add task, add sub-task, comment ---------- */
 document.addEventListener('submit', e => {
   const f = e.target;
   if (f.classList.contains('ev-addp')) {
@@ -3097,8 +3055,6 @@ document.addEventListener('submit', e => {
     e.preventDefault();
     const inp = $('input', f), t = taskByKey(TM.key), text = inp.value.trim(); if (!t || !text) return;
     inp.value = ''; const p = updateTask(t, { comments: [...t.comments, { at: new Date().toISOString(), text }] }); renderTaskModal();
-  } else if (f.id === 'jform') {
-    e.preventDefault(); saveReflection(todayKey(), ($('#jtext').value || '').trim()); toast('Entry saved', 'success'); render();
   }
 });
 $('#navSearch').addEventListener('input', e => {
@@ -3195,7 +3151,6 @@ document.addEventListener('drop', e => {
   else if (ni) {
     const v = ni.dataset.drop;
     if (v === 'today') updateTask(t, { due: todayKey() });
-    else if (v === 'inbox' || v === 'backlog') updateTask(t, { due: null });
   }
 });
 
@@ -3277,6 +3232,63 @@ function syncTideWidth() {
 }
 function openEvPanel(ev) { S.evKey = ev.key; render(); }
 function closeEvPanel() { if (!S.evKey) return; S.evKey = null; render(); closePop(true); }
+
+/* ---------- description: raw HTML + Markdown, rendered through an allow-list sanitizer ---------- */
+const DESC_TAGS = new Set(['B','STRONG','I','EM','U','S','STRIKE','DEL','CODE','PRE','BR','P','DIV','SPAN','UL','OL','LI','A','H1','H2','H3','H4','BLOCKQUOTE','HR','SUB','SUP','MARK','SMALL']);
+function mdToHtml(src) {
+  const inline = x => x
+    .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*\n]+)\*\*|__([^_\n]+)__/g, (m, a, b) => `<strong>${a || b}</strong>`)
+    .replace(/(^|[^*\w])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>')
+    .replace(/(^|[^_\w])_([^_\n]+)_(?!\w)/g, '$1<em>$2</em>')
+    .replace(/~~([^~\n]+)~~/g, '<del>$1</del>')
+    .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2">$1</a>')
+    .replace(/(^|[\s>(])(https?:\/\/[^\s<)]+)/g, '$1<a href="$2">$2</a>');
+  const out = []; let list = null;
+  const close = () => { if (list) { out.push(`</${list}>`); list = null; } };
+  for (const line of String(src).replace(/\r/g, '').split('\n')) {
+    let m;
+    if ((m = line.match(/^\s*(#{1,4})\s+(.*)$/))) { close(); out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`); }
+    else if ((m = line.match(/^\s*[-*+]\s+(.*)$/))) { if (list !== 'ul') { close(); out.push('<ul>'); list = 'ul'; } out.push(`<li>${inline(m[1])}</li>`); }
+    else if ((m = line.match(/^\s*\d+[.)]\s+(.*)$/))) { if (list !== 'ol') { close(); out.push('<ol>'); list = 'ol'; } out.push(`<li>${inline(m[1])}</li>`); }
+    else if ((m = line.match(/^\s*>\s?(.*)$/))) { close(); out.push(`<blockquote>${inline(m[1])}</blockquote>`); }
+    else if (/^\s*([-*_])\1{2,}\s*$/.test(line)) { close(); out.push('<hr>'); }
+    else { close(); out.push(inline(line) + '<br>'); }
+  }
+  close();
+  return out.join('');
+}
+function renderDesc(raw) {
+  const doc = new DOMParser().parseFromString('<body>' + mdToHtml(raw) + '</body>', 'text/html');
+  const walk = node => {
+    [...node.childNodes].forEach(ch => {
+      if (ch.nodeType === 3) return;
+      if (ch.nodeType !== 1) { ch.remove(); return; }
+      if (!DESC_TAGS.has(ch.tagName)) { if (/^(SCRIPT|STYLE|IFRAME|OBJECT|EMBED|LINK|META|SVG|MATH|FORM|TEXTAREA|INPUT|BUTTON)$/.test(ch.tagName)) { ch.remove(); return; } walk(ch); ch.replaceWith(...ch.childNodes); return; }
+      [...ch.attributes].forEach(a => ch.removeAttribute(a.name));
+      if (ch.tagName === 'A') { const h = ch.dataset ? null : null; }
+      walk(ch);
+    });
+  };
+  walk(doc.body);
+  // re-add safe hrefs (attributes were stripped above, so read them from a second parse)
+  const src = new DOMParser().parseFromString('<body>' + mdToHtml(raw) + '</body>', 'text/html');
+  const srcLinks = [...src.body.querySelectorAll('a')], outLinks = [...doc.body.querySelectorAll('a')];
+  outLinks.forEach((a, i) => {
+    const h = (srcLinks[i] && srcLinks[i].getAttribute('href') || '').trim();
+    if (/^(https?:|mailto:)/i.test(h)) { a.setAttribute('href', h); a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener noreferrer'); }
+  });
+  return doc.body.innerHTML;
+}
+document.addEventListener('mousedown', e => {   // click anywhere outside the event sidebar closes it
+  if (!S.evKey) return;
+  const t = e.target;
+  if (!t || !t.closest) return;
+  if (t.closest('#evpanel') || t.closest('.pop') || t.closest('.backdrop') || t.closest('.evt') || t.closest('.toast') || t.closest('[data-action="openEvent"]')) return;
+  const ae = document.activeElement, panel = $('#evpanel');
+  if (panel && ae && panel.contains(ae) && ae.blur) ae.blur();   // commit any text being edited before the panel goes away
+  closeEvPanel();
+}, true);
 function renderEvPanel() {
   const el = $('#evpanel'); if (!el) return;
   const ev = curEv();
@@ -3317,15 +3329,9 @@ function evPanelHTML(ev) {
       ${people ? `<div class="ev-people ev-indent">${people}</div>` : ''}
       ${can ? `<form class="ev-addp ev-indent"><input type="text" placeholder="Add participant (email)" aria-label="Add participant" autocomplete="off"></form>` : ''}
     </div>
-    <div class="ev-sec">
-      <div class="ev-row">${ic('video')}${ev.meet ? `<a class="ev-link" href="${esc(ev.meet)}" target="_blank" rel="noopener">Join Google Meet</a><span class="grow"></span><button class="icon-btn" data-action="evCopyMeet" aria-label="Copy link">${ic('copy')}</button>` : can ? `<button class="ev-pill muted" data-action="evMeet">Add Google Meet</button>` : '<span class="ev-fixed muted">No conferencing</span>'}</div>
-      <div class="ev-row">${ic('pin')}<input class="ev-in" data-evf="loc" value="${esc(ev.loc)}" placeholder="Location" ${ro} aria-label="Location" autocomplete="off"></div>
-    </div>
-    <div class="ev-sec">
-      <div class="ev-row">${ic('link')}${ev.attachments.length ? `<span class="ev-links">${ev.attachments.map(a => `<a class="ev-link" href="${esc(a.fileUrl)}" target="_blank" rel="noopener">${esc(a.title || a.fileUrl)}</a>`).join('')}</span>` : '<span class="ev-fixed muted">No attachments</span>'}</div>
+    <div class="ev-sec"><div class="ev-desc-view ${ev.desc ? '' : 'ph'} ${can ? 'can' : ''}" data-action="evEditDesc" ${can ? 'tabindex="0" role="button"' : ''} aria-label="Description">${ev.desc ? renderDesc(ev.desc) : 'Description (supports HTML and Markdown)'}</div>
       ${ev.link ? `<div class="ev-row ev-indent"><a class="ev-link small" href="${esc(ev.link)}" target="_blank" rel="noopener">Open in Google Calendar</a></div>` : ''}
     </div>
-    <div class="ev-sec"><textarea class="ev-desc" data-evf="desc" rows="3" placeholder="Description" ${ro} aria-label="Description">${esc(ev.desc)}</textarea></div>
     <div class="ev-sec">
       <div class="ev-row"><button class="ev-sw" data-action="evColor" style="--c:${esc(ev.color)}" ${ro} aria-label="Event colour"></button><button class="ev-pill" data-action="evCal" ${can && calOpts ? '' : 'disabled'}>${esc(ev.calName)}</button></div>
       <div class="ev-row ev-indent"><button class="ev-pill" data-action="evBusy" ${ro}>${ev.free ? 'Free' : 'Busy'}</button><button class="ev-pill" data-action="evVis" ${ro}>${ev.visibility === 'public' ? 'Public' : ev.visibility === 'private' ? 'Private' : 'Default visibility'}</button></div>
@@ -3392,6 +3398,16 @@ function onEvField(f) {
   else if (k === 'desc') { if (v !== ev.desc) patchEvent(ev, { desc: v }, { description: v || null }); }
 }
 Object.assign(ACTIONS, {
+  evEditDesc: (a, e) => {
+    const link = e && e.target && e.target.closest && e.target.closest('a');
+    if (link) { window.open(link.href, '_blank', 'noopener'); return; }
+    const ev = curEv(); if (!ev || !ev.editable || ev.pending) return;
+    const ta = document.createElement('textarea'); ta.className = 'ev-desc'; ta.dataset.evf = 'desc'; ta.rows = 6;
+    ta.placeholder = 'Description (HTML and Markdown work, e.g. <b>bold</b> or **bold**)'; ta.value = ev.desc; ta.setAttribute('aria-label', 'Description');
+    const fit = () => { ta.style.height = 'auto'; ta.style.height = Math.max(110, ta.scrollHeight + 2) + 'px'; };
+    a.replaceWith(ta); fit(); ta.addEventListener('input', fit); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+    ta.addEventListener('blur', () => setTimeout(renderEvPanel, 0));
+  },
   evClose: () => closeEvPanel(),
   evMenu: a => { const ev = curEv(); if (ev) openPop(a, `<div class="menu"><button data-action="evDup" ${ev.allDay || !ev.editable ? 'disabled' : ''}>${ic('copy')}Duplicate</button>${ev.link ? `<button data-action="evGcal">${ic('link')}Open in Google Calendar</button>` : ''}<button data-action="evDelete" style="color:var(--warn)" ${ev.editable ? '' : 'disabled'}>${ic('trash')}Delete</button></div>`, { align: 'right' }); },
   evGcal: () => { const ev = curEv(); if (ev && ev.link) window.open(ev.link, '_blank', 'noopener'); },
@@ -3404,8 +3420,6 @@ Object.assign(ACTIONS, {
   evAllDay: () => { const ev = curEv(); if (ev) setAllDay(ev, !ev.allDay); },
   evRepeat: a => { const ev = curEv(); openDropdown(a, { options: [['daily', 'Every day'], ['weekdays', 'Every weekday'], ['weekly', 'Every week'], ['monthly', 'Every month'], ['yearly', 'Every year']], value: '', align: 'right', onPick: v => setRepeat(ev, v) }); },
   evRmPerson: a => { const ev = curEv(); if (!ev) return; const list = ev.attendees.filter(x => x.email !== a.dataset.email); patchEvent(ev, { attendees: list }, { attendees: list.map(x => ({ email: x.email })) }, { sendUpdates: 'all' }); },
-  evMeet: async () => { const ev = curEv(); if (!ev) return; const r = await patchEvent(ev, {}, { conferenceData: { createRequest: { requestId: uid(), conferenceSolutionKey: { type: 'hangoutsMeet' } } } }, { sendUpdates: 'none', conferenceDataVersion: 1 }); if (r && ev.meet) toast('Google Meet link added', 'success', { ttl: 2000 }); },
-  evCopyMeet: () => { const ev = curEv(); if (ev && ev.meet) { try { navigator.clipboard.writeText(ev.meet); } catch (e) {} toast('Meet link copied', 'success', { ttl: 1500 }); } },
   evColor: a => {
     const ev = curEv(); if (!ev) return;
     openPop(a, `<div class="swatches"><button class="sw def ${ev.colorId ? '' : 'on'}" data-c="" style="--c:${esc(ev.calColor)}" title="Calendar colour"></button>${Object.entries(EVENT_COLORS).map(([id, [n, hex]]) => `<button class="sw ${ev.colorId === id ? 'on' : ''}" data-c="${id}" style="--c:${hex}" title="${n}" aria-label="${n}"></button>`).join('')}</div>`, { align: 'left', onMount(el) {
