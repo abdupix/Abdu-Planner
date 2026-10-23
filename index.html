@@ -845,6 +845,14 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
 .ev-desc-view ul,.ev-desc-view ol{margin:2px 0;padding-left:22px}.ev-desc-view blockquote{margin:2px 0;padding-left:10px;border-left:3px solid var(--grid);color:var(--ink-2)}
 .ev-desc-view>br:last-child{display:none}
 .ev-desc{min-height:110px;resize:none;overflow:hidden;background:var(--surface-2)!important;border-radius:var(--r-ctl);padding:8px 10px!important;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px!important}
+/* collapsed sidebar: center everything in the narrow rail */
+.shell.nav-collapsed .nav-head{align-items:center;justify-content:center;padding:2px 0 10px;gap:10px}
+.shell.nav-collapsed .nav-head .grow{display:none}
+.shell.nav-collapsed .nav-items{padding:0}
+.shell.nav-collapsed .ni{justify-content:center;padding:9px 0;gap:0}
+.shell.nav-collapsed .nav-foot{padding:8px 0 2px}
+.shell.nav-collapsed .profile{justify-content:center;padding:8px 0;gap:0}
+@media (max-width:900px){.shell.nav-collapsed .ni{justify-content:flex-start;padding:8px 10px;gap:11px}.shell.nav-collapsed .profile{justify-content:flex-start;padding:8px;gap:9px}.shell.nav-collapsed .nav-head{flex-direction:row;justify-content:flex-start}}
 </style>
 </head>
 <body>
