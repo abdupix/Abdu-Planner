@@ -1,3 +1,4 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <!--
 ================================================================================
 AbduPlan — personal daily planner on top of Google Calendar + Google Tasks
@@ -853,6 +854,9 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
 .shell.nav-collapsed .nav-foot{padding:8px 0 2px}
 .shell.nav-collapsed .profile{justify-content:center;padding:8px 0;gap:0}
 @media (max-width:900px){.shell.nav-collapsed .ni{justify-content:flex-start;padding:8px 10px;gap:11px}.shell.nav-collapsed .profile{justify-content:flex-start;padding:8px;gap:9px}.shell.nav-collapsed .nav-head{flex-direction:row;justify-content:flex-start}}
+.ev-desc-ed{outline:none;cursor:text;background:var(--surface-2)!important;padding:8px 10px;min-height:110px}
+.ev-desc-ed:empty::before{content:attr(data-ph);color:var(--ink-3)}
+.ev-desc-view div{min-height:1.4em}
 </style>
 </head>
 <body>
@@ -3266,27 +3270,96 @@ function mdToHtml(src) {
   close();
   return out.join('');
 }
-function renderDesc(raw) {
-  const doc = new DOMParser().parseFromString('<body>' + mdToHtml(raw) + '</body>', 'text/html');
+const HTML_RE = /<\/?(b|strong|i|em|u|s|del|strike|code|pre|br|p|div|span|ul|ol|li|a|h[1-6]|blockquote|hr|sub|sup|mark|small)\b[^>]*>/i;
+const URL_RE = /(https?:\/\/[^\s<>"')]+)/g;
+function cleanHtml(html) {
+  const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html');
   const walk = node => {
     [...node.childNodes].forEach(ch => {
-      if (ch.nodeType === 3) return;
+      if (ch.nodeType === 3) {
+        if (node.tagName !== 'A' && URL_RE.test(ch.nodeValue)) {
+          URL_RE.lastIndex = 0;
+          const frag = document.createDocumentFragment(); let last = 0, m;
+          while ((m = URL_RE.exec(ch.nodeValue))) {
+            frag.append(ch.nodeValue.slice(last, m.index));
+            const l = document.createElement('a'); l.setAttribute('href', m[1]); l.textContent = m[1]; frag.append(l); last = m.index + m[0].length;
+          }
+          frag.append(ch.nodeValue.slice(last)); ch.replaceWith(frag);
+        }
+        URL_RE.lastIndex = 0; return;
+      }
       if (ch.nodeType !== 1) { ch.remove(); return; }
-      if (!DESC_TAGS.has(ch.tagName)) { if (/^(SCRIPT|STYLE|IFRAME|OBJECT|EMBED|LINK|META|SVG|MATH|FORM|TEXTAREA|INPUT|BUTTON)$/.test(ch.tagName)) { ch.remove(); return; } walk(ch); ch.replaceWith(...ch.childNodes); return; }
-      [...ch.attributes].forEach(a => ch.removeAttribute(a.name));
-      if (ch.tagName === 'A') { const h = ch.dataset ? null : null; }
+      if (!DESC_TAGS.has(ch.tagName)) {
+        if (/^(SCRIPT|STYLE|IFRAME|OBJECT|EMBED|LINK|META|SVG|MATH|FORM|TEXTAREA|INPUT|BUTTON)$/.test(ch.tagName)) { ch.remove(); return; }
+        walk(ch); ch.replaceWith(...ch.childNodes); return;
+      }
+      const href = ch.tagName === 'A' ? (ch.getAttribute('href') || '').trim() : '';
+      [...ch.attributes].forEach(x => ch.removeAttribute(x.name));
+      if (ch.tagName === 'A' && /^(https?:|mailto:)/i.test(href)) { ch.setAttribute('href', href); ch.setAttribute('target', '_blank'); ch.setAttribute('rel', 'noopener noreferrer'); }
       walk(ch);
     });
   };
   walk(doc.body);
-  // re-add safe hrefs (attributes were stripped above, so read them from a second parse)
-  const src = new DOMParser().parseFromString('<body>' + mdToHtml(raw) + '</body>', 'text/html');
-  const srcLinks = [...src.body.querySelectorAll('a')], outLinks = [...doc.body.querySelectorAll('a')];
-  outLinks.forEach((a, i) => {
-    const h = (srcLinks[i] && srcLinks[i].getAttribute('href') || '').trim();
-    if (/^(https?:|mailto:)/i.test(h)) { a.setAttribute('href', h); a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener noreferrer'); }
-  });
   return doc.body.innerHTML;
+}
+const renderDesc = raw => cleanHtml(HTML_RE.test(raw) ? raw : mdToHtml(raw));
+
+/* WYSIWYG description editor: markdown shortcuts turn into real formatting as you type, and the formatting stays while editing */
+function descEditor(ev, host) {
+  const ed = document.createElement('div');
+  ed.className = 'ev-desc-view ev-desc-ed can'; ed.contentEditable = 'true'; ed.spellcheck = true;
+  ed.dataset.ph = 'Description. Try # heading, - bullet, 1. list, **bold**, *italic*';
+  ed.setAttribute('role', 'textbox'); ed.setAttribute('aria-multiline', 'true'); ed.setAttribute('aria-label', 'Description');
+  ed.innerHTML = ev.desc ? renderDesc(ev.desc) : '';
+  host.replaceWith(ed);
+  try { document.execCommand('defaultParagraphSeparator', false, 'div'); } catch (e) {}
+  let dirty = false, busy = false;
+  const cmd = (c, v) => document.execCommand(c, false, v);
+  const blockOf = node => { let b = node && node.nodeType === 3 ? node.parentNode : node; while (b && b !== ed && !/^(DIV|P|LI|H[1-6]|BLOCKQUOTE)$/.test(b.tagName)) b = b.parentNode; return b; };
+  ed.addEventListener('keydown', e => {
+    if (e.key !== ' ' || e.ctrlKey || e.metaKey || e.altKey) return;
+    const sel = getSelection(); if (!sel.rangeCount || !sel.isCollapsed || !ed.contains(sel.anchorNode)) return;
+    let b = blockOf(sel.anchorNode);
+    if (b === ed) { cmd('formatBlock', 'div'); b = blockOf(getSelection().anchorNode); if (!b || b === ed) return; }
+    if (b.tagName === 'LI') return;
+    const r = document.createRange(); r.selectNodeContents(b); r.setEnd(sel.anchorNode, sel.anchorOffset);
+    const t = r.toString();
+    let act = null;
+    if (/^#{1,3}$/.test(t)) { const h = 'H' + t.length; if (b.tagName !== h) act = () => cmd('formatBlock', '<h' + t.length + '>'); }
+    else if (/^[-*+]$/.test(t)) act = () => cmd('insertUnorderedList');
+    else if (/^\d+[.)]$/.test(t)) act = () => cmd('insertOrderedList');
+    else if (t === '>') act = () => cmd('formatBlock', '<blockquote>');
+    if (!act) return;
+    e.preventDefault(); sel.removeAllRanges(); sel.addRange(r); cmd('delete'); act(); dirty = true;
+  });
+  const INLINE = [[/(?<!\*)\*\*([^*\n]+)\*\*$/, 'strong', 4], [/(?<![*\w])\*([^*\n]+)\*$/, 'em', 2], [/`([^`\n]+)`$/, 'code', 2], [/~~([^~\n]+)~~$/, 'del', 4]];
+  ed.addEventListener('input', e => {
+    dirty = true;
+    if (busy || e.inputType !== 'insertText' || !e.data || !/[*`~]/.test(e.data)) return;
+    const sel = getSelection(); if (!sel.rangeCount || !sel.isCollapsed || sel.anchorNode.nodeType !== 3) return;
+    const tn = sel.anchorNode, off = sel.anchorOffset, before = tn.nodeValue.slice(0, off);
+    for (const [re, tag, extra] of INLINE) {
+      const m = before.match(re); if (!m) continue;
+      const len = m[1].length + extra, r = document.createRange(); r.setStart(tn, off - len); r.setEnd(tn, off);
+      sel.removeAllRanges(); sel.addRange(r); busy = true;
+      cmd('insertHTML', `<${tag}>${esc(m[1])}</${tag}>&#8203;`); busy = false; return;
+    }
+  });
+  ed.addEventListener('paste', e => {   // paste as text; markdown in it becomes formatting
+    e.preventDefault();
+    const t = (e.clipboardData || window.clipboardData).getData('text/plain'); if (!t) return;
+    cmd('insertHTML', renderDesc(t).replace(/(<br>)+$/, '')); dirty = true;
+  });
+  ed.addEventListener('blur', () => {
+    if (dirty) {
+      const empty = !ed.textContent.replace(/​/g, '').trim() && !ed.querySelector('hr');
+      const html = empty ? '' : cleanHtml(ed.innerHTML).replace(/​/g, '');
+      if (html !== ev.desc) { patchEvent(ev, { desc: html }, { description: html || null }); return; }
+    }
+    setTimeout(renderEvPanel, 0);
+  });
+  ed.focus();
+  const r = document.createRange(); r.selectNodeContents(ed); r.collapse(false); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r);
 }
 document.addEventListener('mousedown', e => {   // click anywhere outside the event sidebar closes it
   if (!S.evKey) return;
@@ -3305,7 +3378,7 @@ function renderEvPanel() {
   if (!ev) { el.setAttribute('aria-hidden', 'true'); syncTideWidth(); return; }
   el.removeAttribute('aria-hidden');
   const ae = document.activeElement;
-  if (el.contains(ae) && ae.matches && ae.matches('input,textarea')) { syncTideWidth(); return; }   // don't rebuild under the cursor while typing
+  if (el.contains(ae) && ae.matches && ae.matches('input,textarea,[contenteditable="true"]')) { syncTideWidth(); return; }   // don't rebuild under the cursor while typing
   const cs = getComputedStyle($('#shell'));
   el.style.setProperty('--wy', (parseFloat(cs.paddingTop) || 8) + 'px'); el.style.setProperty('--wr', (parseFloat(cs.paddingRight) || 10) + 'px');
   const old = $('.ev-body', el), top = old ? old.scrollTop : 0;
@@ -3410,11 +3483,7 @@ Object.assign(ACTIONS, {
     const link = e && e.target && e.target.closest && e.target.closest('a');
     if (link) { window.open(link.href, '_blank', 'noopener'); return; }
     const ev = curEv(); if (!ev || !ev.editable || ev.pending) return;
-    const ta = document.createElement('textarea'); ta.className = 'ev-desc'; ta.dataset.evf = 'desc'; ta.rows = 6;
-    ta.placeholder = 'Description (HTML and Markdown work, e.g. <b>bold</b> or **bold**)'; ta.value = ev.desc; ta.setAttribute('aria-label', 'Description');
-    const fit = () => { ta.style.height = 'auto'; ta.style.height = Math.max(110, ta.scrollHeight + 2) + 'px'; };
-    a.replaceWith(ta); fit(); ta.addEventListener('input', fit); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
-    ta.addEventListener('blur', () => setTimeout(renderEvPanel, 0));
+    descEditor(ev, a);
   },
   evClose: () => closeEvPanel(),
   evMenu: a => { const ev = curEv(); if (ev) openPop(a, `<div class="menu"><button data-action="evDup" ${ev.allDay || !ev.editable ? 'disabled' : ''}>${ic('copy')}Duplicate</button>${ev.link ? `<button data-action="evGcal">${ic('link')}Open in Google Calendar</button>` : ''}<button data-action="evDelete" style="color:var(--warn)" ${ev.editable ? '' : 'disabled'}>${ic('trash')}Delete</button></div>`, { align: 'right' }); },
@@ -3656,3 +3725,5 @@ boot();
 </script>
 </body>
 </html>
+
+</body></html>
