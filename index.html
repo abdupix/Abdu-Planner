@@ -703,21 +703,27 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
 .pomo{background:radial-gradient(at 50% 40%,var(--accent-soft),transparent 64%)}
 .pomo-host{position:relative;width:100%;height:100vh}
 .pomo-ic,.pomo-sq,.pomo-tabs{background:color-mix(in srgb,var(--surface) 72%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
-.pomo-mini{display:none;align-items:center;justify-content:center;gap:14px;width:100%}
-.pomo.mini{min-height:0;flex-direction:row;padding:6px 12px;gap:0;justify-content:center}
+.pomo-mini{display:none;align-items:center;justify-content:center;gap:10px;width:100%}
+.pomo.mini{min-height:0;flex-direction:row;padding:4px 8px;gap:0;justify-content:center}
 .pomo.mini>*:not(.pomo-mini){display:none!important}
 .pomo.mini .pomo-mini{display:flex}
 .pm-l{display:flex;flex-direction:column;gap:2px}
-.pm-l button{width:26px;height:24px;border:0;background:transparent;display:grid;place-items:center;color:var(--ink-2)}
+.pm-l button{width:22px;height:20px;border:0;background:transparent;display:grid;place-items:center;color:var(--ink-2)}
 .pm-l button:hover{background:color-mix(in srgb,var(--ink) 8%,transparent)}
 .pm-l button.on{color:var(--accent)}
 .pm-l .ic{width:15px;height:15px}
-#pmTime{font-size:34px;font-weight:300;font-variant-numeric:tabular-nums;font-family:var(--font);letter-spacing:-.02em;line-height:1}
-.pomo-play.sm{width:42px;height:42px}
-.pomo-play.sm .ic{width:18px;height:18px}
+#pmTime{font-size:28px;font-weight:300;font-variant-numeric:tabular-nums;font-family:var(--font);letter-spacing:-.02em;line-height:1}
+.pomo-play.sm{width:34px;height:34px}
+.pomo-play.sm .ic{width:15px;height:15px}
 .pomo.mini.locked #pmPlay{opacity:.45;pointer-events:none}
 .modal.pomo-modal.mini{width:270px;height:auto}
 .modal.pomo-modal.mini .pomo{min-height:0}
+.pomo.is-break{--accent:#2F7BF6;--accent-hover:#1F6AE6;--accent-ink:#fff;--accent-soft:rgba(47,123,246,.17)}
+.pomo-edge{position:absolute;left:0;top:0;width:100%;height:100%;display:none;pointer-events:none;z-index:5;overflow:visible}
+.pomo-edge rect{fill:none;stroke-width:3}
+.pomo-edge .pe-trk{display:none}
+.pomo-edge .pe-arc{stroke:var(--accent);opacity:.4;transition:stroke .3s}
+.pomo.mini>.pomo-edge{display:block!important}
 
 /* settings with sections */
 .modal.settings{width:min(780px,100%);height:min(580px,92dvh)}
@@ -1971,7 +1977,7 @@ function renderNav() {
     `<button class="ni ${S.view === 'calendar' ? 'on' : ''}" data-action="nav" data-view="calendar" title="Calendar">${ic('cal')}<span class="lbl">Calendar</span></button>` +
     `<button class="ni ${S.view === 'trash' ? 'on' : ''}" data-action="nav" data-view="trash" title="Trash">${ic('trash')}<span class="lbl">Trash</span>${P.trash.length ? `<span class="cnt">${P.trash.length}</span>` : ''}</button>`;
   const nm = (P.name || 'Abdu').trim() || 'Abdu';
-  $('#navFoot').innerHTML = `<button class="profile" data-action="profileMenu"><span class="avatar">${esc(nm[0] || '?')}</span><span class="nm">${esc(nm)}’s Plan</span>${ic('chevd')}</button>`;
+  $('#navFoot').innerHTML = `<button class="ni" data-action="openFocus" title="Open the focus timer window">${ic('focus')}<span class="lbl">Focus</span></button><button class="profile" data-action="profileMenu"><span class="avatar">${esc(nm[0] || '?')}</span><span class="nm">${esc(nm)}’s Plan</span>${ic('chevd')}</button>`;
   $('#btnCollapse').innerHTML = ic(P.navCollapsed ? 'right' : 'left');
 }
 
@@ -2626,8 +2632,10 @@ function helpModal() {
 
 /* ---------- Focus: a small pomodoro window (Document Picture-in-Picture → popup → in-page fallback) ---------- */
 let PM = null;
+let PM_CARRY = null;   // timer state handed from a closing focus window to the one that replaces it (resize)
 function pomoHTML(t, inpage) {
   return `<div class="pomo">
+    <svg class="pomo-edge" aria-hidden="true"><rect class="pe-trk"/><rect class="pe-arc" id="pEdge" pathLength="100"/></svg>
     <div class="pomo-side l"><button class="pomo-ic" id="pSet" title="Timer lengths">${ic('gear')}</button><button class="pomo-ic" id="pStats" title="Today’s sessions">${ic('chart')}</button><button class="pomo-ic" id="pMini" title="Mini timer">${ic('shrink')}</button></div>
     <div class="pomo-side r"><button class="pomo-ic ${P.pomo.sound ? 'on' : ''}" id="pBell" title="Chime when time is up">${ic('bell')}</button><button class="pomo-ic" id="pMusic" title="Soft background noise">${ic('music')}</button></div>
     ${inpage ? `<button class="pomo-ic pomo-x" id="pClose" title="Close" style="display:none">${ic('x')}</button>` : ''}
@@ -2650,7 +2658,8 @@ function mountPomo(doc, win, t, closeFn, inpage, host) {
   }
   host.innerHTML = pomoHTML(t, inpage);
   const q = s => host.querySelector(s), cfg = P.pomo, C = 2 * Math.PI * 118;
-  let mode = 'focus', total = cfg.focus * 60, left = total, running = false, endAt = 0, iv = null, spent = 0, runStart = 0, ctx = null, noise = null, closed = false, panel = '';
+  const carry = PM_CARRY; PM_CARRY = null;
+  let mode = carry ? carry.mode : 'focus', total = cfg[mode] * 60, left = carry ? carry.left : total, running = false, endAt = 0, iv = null, spent = carry ? carry.spent : 0, runStart = 0, ctx = null, noise = null, closed = false, panel = '', swapping = false;
   const fmt = n => `${pad(Math.floor(n / 60))}:${pad(n % 60)}`;
   const logSpent = () => {
     const task = taskByKey(tk(t));
@@ -2687,7 +2696,15 @@ function mountPomo(doc, win, t, closeFn, inpage, host) {
     arc.setAttribute('stroke-dasharray', String(C)); arc.setAttribute('stroke-dashoffset', String(C * (1 - frac)));
     const ang = frac * 2 * Math.PI, kn = q('#pKnob');
     kn.setAttribute('cx', String(130 + 118 * Math.cos(ang))); kn.setAttribute('cy', String(130 + 118 * Math.sin(ang)));
+    const edge = q('#pEdge');   // mini view border: shrinks as the time runs out
+    if (edge) {
+      const r = q('.pomo').getBoundingClientRect(), W = Math.max(1, Math.round(r.width)), H = Math.max(1, Math.round(r.height)), svg = edge.ownerSVGElement;
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      for (const el of svg.querySelectorAll('rect')) { el.setAttribute('x', '2'); el.setAttribute('y', '2'); el.setAttribute('width', String(W - 4)); el.setAttribute('height', String(H - 4)); el.setAttribute('rx', '8'); }
+      edge.setAttribute('stroke-dasharray', `${(1 - frac) * 100} 100`);
+    }
     q('#pPlay').innerHTML = ic(running ? 'pause' : 'play'); q('#pPlay').title = running ? 'Pause' : 'Start'; q('#pmPlay').innerHTML = ic(running ? 'pause' : 'play'); q('#pmPlay').title = running ? 'Pause' : 'Start';
+    q('.pomo').classList.toggle('is-break', mode === 'break');
     doc.title = running ? `${fmt(left)} · ${cap(mode)}` : 'Focus';
   }
   const showPanel = kind => {
@@ -2705,16 +2722,21 @@ function mountPomo(doc, win, t, closeFn, inpage, host) {
   });
   const toggleRun = () => { if (running) stop(); else { if (!left) left = total; go(); } paint(); };
   q('#pPlay').addEventListener('click', toggleRun); q('#pmPlay').addEventListener('click', toggleRun);
-  let mini = false, locked = false, full = { w: 0, h: 0 };
-  const setMini = on => {
-    mini = on; q('.pomo').classList.toggle('mini', on); if (inpage) host.classList.toggle('mini', on);
-    if (inpage) return;
-    try {
-      const dw = win.outerWidth - win.innerWidth, dh = win.outerHeight - win.innerHeight;
-      if (on) { full = { w: win.innerWidth, h: win.innerHeight }; win.resizeTo(220 + dw, 72 + dh); }   // the browser enforces its own minimum
-      else win.resizeTo((full.w || 380) + dw, (full.h || 520) + dh);
-    } catch (e) {}
+  let mini = !!(carry && carry.mini), locked = !!(carry && carry.locked);
+  // Picture-in-Picture windows ignore resizeTo, so a size change reopens the window at the new size and hands over the timer.
+  const swap = on => {
+    if (swapping) return; swapping = true;
+    const now = Date.now();
+    PM_CARRY = { mode, left: running ? Math.max(0, Math.round((endAt - now) / 1000)) : left, spent: spent + (running && mode === 'focus' ? (now - runStart) / 1000 : 0), running, mini: on, locked };
+    stop();
+    openPomodoro(t, on);
   };
+  const setMini = on => {
+    if (!inpage) { swap(on); return; }
+    mini = on; q('.pomo').classList.toggle('mini', on); host.classList.toggle('mini', on);
+  };
+  if (mini) { q('.pomo').classList.add('mini'); if (inpage) host.classList.add('mini'); }
+  if (locked) { q('.pomo').classList.add('locked'); q('#pmLock').classList.add('on'); }
   q('#pMini').addEventListener('click', () => setMini(true));
   q('#pmBack').addEventListener('click', () => setMini(false));
   q('#pmLock').addEventListener('click', e => { locked = !locked; q('.pomo').classList.toggle('locked', locked); e.currentTarget.classList.toggle('on', locked); });
@@ -2739,24 +2761,29 @@ function mountPomo(doc, win, t, closeFn, inpage, host) {
       const g = ctx.createGain(); g.gain.value = 0.25; noise.connect(g); g.connect(ctx.destination); noise.start(); btn.classList.add('on');
     } catch (er) { toast('Audio isn’t available in this window', 'error'); }
   });
-  const onClose = () => { if (closed) return; closed = true; stop(); logSpent(); if (noise) { try { noise.stop(); ctx.close(); } catch (e) {} } };
+  const onClose = () => { if (closed) return; closed = true; if (noise) { try { noise.stop(); ctx.close(); } catch (e) {} noise = null; } if (swapping) return; stop(); logSpent(); };
   if (inpage) { const x = q('#pClose'); x.style.display = ''; x.addEventListener('click', closeFn); } else win.addEventListener('pagehide', onClose);
-  paint(); go(); paint();   // starts counting down as soon as the window opens
+  if (carry) {   // a resized window: pick up the same mode, time and running state
+    host.querySelectorAll('.pomo-tabs button').forEach(b => b.classList.toggle('on', b.dataset.m === mode));
+    if (carry.running) go();
+    paint();
+  } else { paint(); go(); paint(); }   // starts counting down as soon as the window opens
   return { onClose };
 }
-async function openPomodoro(t) {
+async function openPomodoro(t, mini = false) {
+  t = t || { title: 'Focus session', list: '', id: '' };   // opened from the sidebar: not tied to a task
   closeModal(true, true);
   if (window.documentPictureInPicture) {
     try {
       if (documentPictureInPicture.window) documentPictureInPicture.window.close();
-      const pip = await documentPictureInPicture.requestWindow({ width: 380, height: 520 });
+      const pip = await documentPictureInPicture.requestWindow(mini ? { width: 180, height: 62 } : { width: 380, height: 520 });
       [...document.querySelectorAll('style')].forEach(st => pip.document.head.appendChild(st.cloneNode(true)));
       [...document.querySelectorAll('link[rel=stylesheet]')].forEach(l => { const c = pip.document.createElement('link'); c.rel = 'stylesheet'; c.href = l.href; pip.document.head.appendChild(c); });
       mountPomo(pip.document, pip, t, () => pip.close(), false); return;
     } catch (e) { /* fall through to a popup */ }
   }
   let w = null;
-  try { w = window.open('', 'dayplan-focus', `popup=yes,width=380,height=520,left=${Math.max(0, (screen.availWidth || 1200) - 420)},top=80,toolbar=no,menubar=no,location=no,status=no,scrollbars=no`); } catch (e) {}
+  try { w = window.open('', 'dayplan-focus', `popup=yes,width=${mini ? 180 : 380},height=${mini ? 62 : 520},left=${Math.max(0, (screen.availWidth || 1200) - 420)},top=80,toolbar=no,menubar=no,location=no,status=no,scrollbars=no`); } catch (e) {}
   if (w && w.document) {
     const ico = document.querySelector('link[rel~="icon"]');   // the Focus popup gets the same icon
     w.document.open(); w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Focus</title>' + (ico ? '<link rel="icon" href="' + ico.href + '">' : '') + '</head><body></body></html>'); w.document.close();
@@ -3498,6 +3525,13 @@ function onEvField(f) {
   else if (k === 'loc') { if (v.trim() !== ev.loc) patchEvent(ev, { loc: v.trim() }, { location: v.trim() || null }); }
   else if (k === 'desc') { if (v !== ev.desc) patchEvent(ev, { desc: v }, { description: v || null }); }
 }
+Object.assign(ACTIONS, {
+  openFocus: () => {
+    const w = window.documentPictureInPicture && documentPictureInPicture.window;
+    if (w && !w.closed) { w.focus(); return; }   // already open: bring it forward instead of resetting the timer
+    openPomodoro(null);
+  }
+});
 Object.assign(ACTIONS, {
   evEditDesc: (a, e) => {
     const link = e && e.target && e.target.closest && e.target.closest('a');
