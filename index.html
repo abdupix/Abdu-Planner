@@ -715,7 +715,6 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
 #pmTime{font-size:28px;font-weight:300;font-variant-numeric:tabular-nums;font-family:var(--font);letter-spacing:-.02em;line-height:1}
 .pomo-play.sm{width:34px;height:34px}
 .pomo-play.sm .ic{width:15px;height:15px}
-.pomo.mini.locked #pmPlay{opacity:.45;pointer-events:none}
 .modal.pomo-modal.mini{width:270px;height:auto}
 .modal.pomo-modal.mini .pomo{min-height:0}
 .pomo.is-break{--accent:#2F7BF6;--accent-hover:#1F6AE6;--accent-ink:#fff;--accent-soft:rgba(47,123,246,.17)}
@@ -2637,14 +2636,13 @@ function pomoHTML(t, inpage) {
   return `<div class="pomo">
     <svg class="pomo-edge" aria-hidden="true"><rect class="pe-trk"/><rect class="pe-arc" id="pEdge" pathLength="100"/></svg>
     <div class="pomo-side l"><button class="pomo-ic" id="pSet" title="Timer lengths">${ic('gear')}</button><button class="pomo-ic" id="pStats" title="Today’s sessions">${ic('chart')}</button><button class="pomo-ic" id="pMini" title="Mini timer">${ic('shrink')}</button></div>
-    <div class="pomo-side r"><button class="pomo-ic ${P.pomo.sound ? 'on' : ''}" id="pBell" title="Chime when time is up">${ic('bell')}</button><button class="pomo-ic" id="pMusic" title="Soft background noise">${ic('music')}</button></div>
-    ${inpage ? `<button class="pomo-ic pomo-x" id="pClose" title="Close" style="display:none">${ic('x')}</button>` : ''}
+    <div class="pomo-side r"><button class="pomo-ic" id="pClose" title="Close">${ic('x')}</button><button class="pomo-ic ${P.pomo.sound ? 'on' : ''}" id="pBell" title="Chime when time is up">${ic('bell')}</button><button class="pomo-ic" id="pMusic" title="Soft background noise">${ic('music')}</button></div>
     <div class="pomo-tabs"><button class="on" data-m="focus">Focus</button><button data-m="break">Break</button></div>
     <div class="pomo-ring"><svg viewBox="0 0 260 260" width="260" height="260"><circle class="trk" cx="130" cy="130" r="118"/><circle class="arc" id="pArc" cx="130" cy="130" r="118"/><circle class="knob" id="pKnob" r="9" cx="248" cy="130"/></svg>
       <div class="pomo-time"><b id="pTime">25:00</b><span id="pMode">FOCUS</span></div></div>
     <div class="pomo-ctl"><button class="pomo-sq" id="pReset" title="Reset">${ic('undo')}</button><button class="pomo-play" id="pPlay" title="Start">${ic('play')}</button><button class="pomo-sq" id="pPreset" title="Change length">${ic('hourglass')}</button></div>
     <div class="pomo-task">${esc(t.title)}</div>
-    <div class="pomo-mini"><div class="pm-l"><button id="pmBack" title="Full window" aria-label="Full window">${ic('left')}</button><button id="pmLock" title="Lock controls" aria-label="Lock controls">${ic('lock')}</button></div><b id="pmTime">25:00</b><button class="pomo-play sm" id="pmPlay" title="Start">${ic('play')}</button></div>
+    <div class="pomo-mini"><div class="pm-l"><button id="pmBack" title="Full window" aria-label="Full window">${ic('left')}</button><button id="pmClose" title="Close" aria-label="Close">${ic('x')}</button></div><b id="pmTime">25:00</b><button class="pomo-play sm" id="pmPlay" title="Start">${ic('play')}</button></div>
     <div class="pomo-panel" id="pPanel" hidden></div></div>`;
 }
 function mountPomo(doc, win, t, closeFn, inpage, host) {
@@ -2722,12 +2720,12 @@ function mountPomo(doc, win, t, closeFn, inpage, host) {
   });
   const toggleRun = () => { if (running) stop(); else { if (!left) left = total; go(); } paint(); };
   q('#pPlay').addEventListener('click', toggleRun); q('#pmPlay').addEventListener('click', toggleRun);
-  let mini = !!(carry && carry.mini), locked = !!(carry && carry.locked);
+  let mini = !!(carry && carry.mini);
   // Picture-in-Picture windows ignore resizeTo, so a size change reopens the window at the new size and hands over the timer.
   const swap = on => {
     if (swapping) return; swapping = true;
     const now = Date.now();
-    PM_CARRY = { mode, left: running ? Math.max(0, Math.round((endAt - now) / 1000)) : left, spent: spent + (running && mode === 'focus' ? (now - runStart) / 1000 : 0), running, mini: on, locked };
+    PM_CARRY = { mode, left: running ? Math.max(0, Math.round((endAt - now) / 1000)) : left, spent: spent + (running && mode === 'focus' ? (now - runStart) / 1000 : 0), running, mini: on };
     stop();
     openPomodoro(t, on);
   };
@@ -2736,10 +2734,8 @@ function mountPomo(doc, win, t, closeFn, inpage, host) {
     mini = on; q('.pomo').classList.toggle('mini', on); host.classList.toggle('mini', on);
   };
   if (mini) { q('.pomo').classList.add('mini'); if (inpage) host.classList.add('mini'); }
-  if (locked) { q('.pomo').classList.add('locked'); q('#pmLock').classList.add('on'); }
   q('#pMini').addEventListener('click', () => setMini(true));
   q('#pmBack').addEventListener('click', () => setMini(false));
-  q('#pmLock').addEventListener('click', e => { locked = !locked; q('.pomo').classList.toggle('locked', locked); e.currentTarget.classList.toggle('on', locked); });
   q('#pReset').addEventListener('click', () => { stop(); left = total; paint(); });
   q('#pPreset').addEventListener('click', () => {
     if (running) return;
@@ -2762,7 +2758,8 @@ function mountPomo(doc, win, t, closeFn, inpage, host) {
     } catch (er) { toast('Audio isn’t available in this window', 'error'); }
   });
   const onClose = () => { if (closed) return; closed = true; if (noise) { try { noise.stop(); ctx.close(); } catch (e) {} noise = null; } if (swapping) return; stop(); logSpent(); };
-  if (inpage) { const x = q('#pClose'); x.style.display = ''; x.addEventListener('click', closeFn); } else win.addEventListener('pagehide', onClose);
+  q('#pClose').addEventListener('click', closeFn); q('#pmClose').addEventListener('click', closeFn);
+  if (!inpage) win.addEventListener('pagehide', onClose);
   if (carry) {   // a resized window: pick up the same mode, time and running state
     host.querySelectorAll('.pomo-tabs button').forEach(b => b.classList.toggle('on', b.dataset.m === mode));
     if (carry.running) go();
