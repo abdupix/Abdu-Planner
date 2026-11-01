@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 8 240 240">
+  <defs>
+    <!-- Background Gradient (Dark Modern Sky) -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="60%" stop-color="#1E1B4B"/>
+      <stop offset="100%" stop-color="#31103F"/>
+    </linearGradient>
+
+    <!-- Sun & Horizon Warm Glow -->
+    <linearGradient id="sunGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFF066"/>
+      <stop offset="50%" stop-color="#FF9E00"/>
+      <stop offset="100%" stop-color="#FF5500"/>
+    </linearGradient>
+
+    <!-- Soft Ambient Light Overlay -->
+    <radialGradient id="skyGlow" cx="50%" cy="65%" r="50%">
+      <stop offset="0%" stop-color="#FF8A00" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#FF8A00" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Ray Accent Gradient -->
+    <linearGradient id="rayGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#FFB703" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#FFD166" stop-opacity="0.8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Windows 11 Standard Icon Frame (256x256 with rx=41 ~16% radius) -->
+  <rect x="8" y="8" width="240" height="240" rx="41" fill="url(#bgGrad)"/>
+
+  <!-- Ambient Glow -->
+  <rect x="8" y="8" width="240" height="240" rx="41" fill="url(#skyGlow)"/>
+
+  <!-- Minimal Sun Rays -->
+  <g stroke="url(#rayGrad)" stroke-width="4" stroke-linecap="round">
+    <line x1="128" y1="88" x2="128" y2="72"/>
+    <line x1="88" y1="104" x2="74" y2="90"/>
+    <line x1="168" y1="104" x2="182" y2="90"/>
+  </g>
+
+  <!-- Sunrise Body -->
+  <path d="M 80 160 A 48 48 0 0 1 176 160 Z" fill="url(#sunGrad)"/>
+
+  <!-- Modern Sleek Horizon Line -->
+  <line x1="56" y1="160" x2="200" y2="160" stroke="#FFFFFF" stroke-opacity="0.85" stroke-width="4" stroke-linecap="round"/>
+</svg>
