@@ -1892,7 +1892,7 @@ function whenFor(t) {
   return evs.length ? `${pad(evs[0].start.getHours())}:${pad(evs[0].start.getMinutes())}` : '';
 }
 /* >>> EXT-BRIDGE START: optional Chrome/Edge extension that writes the real time into Google Tasks (private endpoint, see extension/README.md). Silent if the extension is absent. */
-const EXT = { ready: false, lastPing: 0, queue: Promise.resolve(), sig: {}, status: '' };
+const EXT = { ready: false, lastPing: 0, queue: Promise.resolve(), sig: {}, tried: {}, status: '' };
 const EXT_SIG_KEY = 'abduplan.gtime.v1';   // taskId -> "YYYY-MM-DD|HH:MM" last accepted by Google, so we only send changes
 try { EXT.sig = JSON.parse(localStorage.getItem(EXT_SIG_KEY) || '{}') || {}; } catch (e) { EXT.sig = {}; }
 const extSaveSig = () => { try { localStorage.setItem(EXT_SIG_KEY, JSON.stringify(EXT.sig)); } catch (e) {} };
@@ -1923,18 +1923,30 @@ function extPushTime(t, w) {   // w = 'HH:MM' or '' (cleared). Fire and forget, 
   const prev = EXT.sig[t.id] || '';
   let date = t.due || null; const time = w || null;
   if (time && !date) { const e = eventsForTask(t).filter(x => !x.allDay && !x.pending).sort((a, b) => a.start - b.start)[0]; date = e ? dkey(e.start) : null; if (!date) return; }
+  if (time && date < todayKey()) return;   // past days: nothing to remind about
   if (!time) { if (!prev) return; date = t.due || prev.split('|')[0]; }   // never set a time through the extension: nothing to clear
   const sig = time ? date + '|' + time : '';
-  if (sig === prev) return;
+  if (sig === prev || EXT.tried[t.id] === sig) return;   // unchanged, or already attempted this session (a failure is retried after a reload or when the time changes)
+  EXT.tried[t.id] = sig;
   const id = t.id;
   EXT.queue = EXT.queue.then(() => extSend(id, date, time, sig)).catch(() => {});
 }
 async function extSend(id, date, time, sig) {
-  if (!(await extEnsure())) return;
+  if (!(await extEnsure())) { delete EXT.tried[id]; return; }   // extension not there (yet): allow a later retry
   const r = await extCall('set-time', { taskId: id, date, time, tz: TZ });
   EXT.status = r.ok ? 'OK' : (r.code || 'ERROR');
-  if (r.ok) { if (sig) EXT.sig[id] = sig; else delete EXT.sig[id]; extSaveSig(); }
-  else if (r.code === 'NO_EXTENSION' || r.code === 'EXT_ERROR') EXT.ready = false;   // on any other failure keep the old signature so it retries next time
+  if (r.ok) {
+    if (sig) EXT.sig[id] = sig; else delete EXT.sig[id]; extSaveSig();
+    const t = (S.tasks || []).find(x => x.id === id);   // Google accepted the time: re-run the sync so the now-redundant "⏰" notes line gets dropped
+    if (t && typeof syncTaskWhen === 'function') syncTaskWhen(t);
+  }
+  else if (r.code === 'NO_EXTENSION' || r.code === 'EXT_ERROR') { EXT.ready = false; delete EXT.tried[id]; }   // on any other failure keep the old signature so it retries next time
+}
+function extSigFor(t, w) {   // "YYYY-MM-DD|HH:MM" for the task's current time, or '' when there is none
+  if (!w) return '';
+  let date = t.due || null;
+  if (!date) { const e = eventsForTask(t).filter(x => !x.allDay && !x.pending).sort((a, b) => a.start - b.start)[0]; date = e ? dkey(e.start) : null; }
+  return date ? date + '|' + w : '';
 }
 function extStatusText() {
   if (S.demo) return 'Not used in demo mode.';
@@ -1945,8 +1957,12 @@ function extStatusText() {
 async function syncTaskWhen(t) {
   if (!t || t.pending || t.parent) return;
   const w = whenFor(t);
-  if (w !== (t.when || '')) await updateTask(t, { when: w }, { noEventSync: true });
-  extPushTime(t, w);   // NEW: also write the real time into Google Tasks via the extension (no-op without it)
+  // Once Google has accepted this exact time through the extension, the "⏰ HH:MM" notes line is redundant, so drop it
+  // (unless Settings -> "Keep ⏰ line in notes" is on). Until then the line stays as the fallback.
+  const viaExt = !S.demo && !P.keepNoteTime && !!w && EXT.sig[t.id] === extSigFor(t, w);
+  const want = viaExt ? '' : w;
+  if (want !== (t.when || '')) await updateTask(t, { when: want }, { noEventSync: true });
+  extPushTime(t, w);   // also write the real time into Google Tasks via the extension (no-op without it)
 }
 /* Notifications: Google Tasks' API can't set a task's alert time, so each scheduled task's calendar block carries a popup reminder instead (Google Calendar app alerts you) */
 const remBody = () => (P.taskRemind >= 0 ? { useDefault: false, overrides: [{ method: 'popup', minutes: +P.taskRemind || 0 }] } : null);
@@ -1961,7 +1977,7 @@ function reconcileTaskTimes() {   // after calendars load: keep every task's tim
       if (t.done || t.parent || t.pending) continue;
       const linked = eventsForTask(t).length > 0;
       if (!linked && !(t.when && t.due && S.loadedWeeks.has(weekStartKey(t.due)))) continue;
-      if (whenFor(t) !== (t.when || '')) await syncTaskWhen(t);
+      if (whenFor(t) !== (t.when || '') || (t.when && !P.keepNoteTime && !S.demo)) await syncTaskWhen(t);   // 2nd condition: migrate old "⏰" lines once the extension has pushed the time
     }
     const want = remBody();
     if (want) for (const e of S.events.slice()) {   // add the reminder to task blocks that don't have it yet (future ones only)
@@ -2670,7 +2686,8 @@ function settingsModal(sec) {
           <div class="lab">Task reminder${ddField('trem', [[-1, 'Off'], [0, 'At start time'], [5, '5 min before'], [10, '10 min before'], [15, '15 min before'], [30, '30 min before'], [60, '1 hour before']], P.taskRemind)}</div>
           <div class="lab">Default block length${ddField('dur', [15, 30, 45, 60, 90].map(x => [x, fmtDur(x)]), P.defaultDuration)}</div>
           <div class="lab">Calendar for task blocks${ddField('cal', cals.map(c => [c.id, c.name]), blockCal()?.id)}</div>
-          <div class="lab">Google Tasks time<span class="muted small" id="extStatus" style="font-weight:400">${esc(extStatusText())}</span></div>`)}
+          <div class="lab">Google Tasks time<span class="muted small" id="extStatus" style="font-weight:400">${esc(extStatusText())}</span></div>
+          <label class="check"><input type="checkbox" name="keepnote" ${P.keepNoteTime ? 'checked' : ''}>Also keep the “⏰ HH:MM” line in task notes (off = removed once Google has the real time)</label>`)}
         ${sec_('appearance', `<h3>Appearance</h3>
           ${(() => {
             const row = (slot, title, hint) => `<div class="lab">${title}<span class="inline"><span class="thumb" id="thumb-${slot}" style="${slotUrl(slot) ? `background-image:url('${slotUrl(slot)}')` : ''}"></span><button type="button" class="btn sm" data-action="pickBg" data-slot="${slot}">${ic('image')}Upload image…</button><button type="button" class="btn sm ghost" data-action="clearBg" data-slot="${slot}">Remove</button></span><span class="muted small" style="font-weight:400">${hint}</span></div>`;
@@ -2697,7 +2714,7 @@ function settingsModal(sec) {
         e.preventDefault();
         const f = new FormData(e.target), wkChanged = P.weekStart !== +f.get('wk') || P.defaultCalendar !== f.get('cal');
         if (hm2min(f.get('we')) <= hm2min(f.get('ws'))) { toast('Working hours must end after they start.', 'error'); SETSEC = 'planning'; $$('.set .sec').forEach(x => { x.hidden = x.dataset.sec !== 'planning'; }); $$('.set-nav button').forEach(b => b.classList.toggle('on', b.dataset.sec === 'planning')); return; }
-        P.name = (f.get('uname') || '').trim() || 'Abdu'; P.workStart = f.get('ws'); P.workEnd = f.get('we'); P.defaultDuration = +f.get('dur'); P.taskRemind = +f.get('trem'); P.weekStart = +f.get('wk'); P.defaultCalendar = f.get('cal'); P.theme = f.get('theme'); P.lite = f.has('lite');
+        P.name = (f.get('uname') || '').trim() || 'Abdu'; P.workStart = f.get('ws'); P.workEnd = f.get('we'); P.defaultDuration = +f.get('dur'); P.taskRemind = +f.get('trem'); P.weekStart = +f.get('wk'); P.defaultCalendar = f.get('cal'); P.theme = f.get('theme'); P.lite = f.has('lite'); P.keepNoteTime = f.has('keepnote');
         P.pomo.focus = Math.max(1, Math.min(120, parseInt(f.get('pf')) || 25)); P.pomo.break = Math.max(1, Math.min(120, parseInt(f.get('pb')) || 5)); P.pomo.sound = f.has('ps');
         savePrefs(); applyTheme(); applyLite(); closeModal();
         if (wkChanged) { S.loadedWeeks.clear(); }
