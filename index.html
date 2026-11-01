@@ -42,7 +42,6 @@ in the task's notes as marker lines — visible in the Google Tasks app too):
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>AbduPlan</title>
 <link rel="icon" href="sunrise-cropped.svg" type="image/svg+xml">
-<link rel="icon" href="sunrise-cropped.ico" type="image/x-icon">
 <script>
 /* ============================ CONFIG ============================ */
 /* >>> PASTE YOUR GOOGLE OAUTH WEB CLIENT ID HERE <<< */
@@ -1892,10 +1891,62 @@ function whenFor(t) {
   const evs = eventsForTask(t).filter(e => !e.allDay && !e.pending && (!t.due || dkey(e.start) === t.due)).sort((a, b) => a.start - b.start);
   return evs.length ? `${pad(evs[0].start.getHours())}:${pad(evs[0].start.getMinutes())}` : '';
 }
+/* >>> EXT-BRIDGE START: optional Chrome/Edge extension that writes the real time into Google Tasks (private endpoint, see extension/README.md). Silent if the extension is absent. */
+const EXT = { ready: false, lastPing: 0, queue: Promise.resolve(), sig: {}, status: '' };
+const EXT_SIG_KEY = 'abduplan.gtime.v1';   // taskId -> "YYYY-MM-DD|HH:MM" last accepted by Google, so we only send changes
+try { EXT.sig = JSON.parse(localStorage.getItem(EXT_SIG_KEY) || '{}') || {}; } catch (e) { EXT.sig = {}; }
+const extSaveSig = () => { try { localStorage.setItem(EXT_SIG_KEY, JSON.stringify(EXT.sig)); } catch (e) {} };
+function extCall(type, payload, timeoutMs) {
+  return new Promise(resolve => {
+    const id = 'x' + Math.random().toString(36).slice(2, 12);
+    const onMsg = ev => {
+      const d = ev.data;
+      if (ev.source !== window || ev.origin !== location.origin || !d || d.source !== 'abduplan-ext' || d.id !== id) return;
+      clearTimeout(timer); window.removeEventListener('message', onMsg); resolve(d);
+    };
+    const timer = setTimeout(() => { window.removeEventListener('message', onMsg); resolve({ ok: false, code: 'NO_EXTENSION' }); }, timeoutMs || 25000);
+    window.addEventListener('message', onMsg);
+    window.postMessage({ source: 'abduplan-page', id, type, ...payload }, location.origin);
+  });
+}
+async function extEnsure() {   // handshake: ping the content script (cached for 20 s when it is absent)
+  if (EXT.ready) return true;
+  if (Date.now() - EXT.lastPing < 20000) return false;
+  EXT.lastPing = Date.now();
+  const r = await extCall('ping', {}, 1500);
+  EXT.ready = r.type === 'pong' && !!r.ok;
+  if (!EXT.ready) EXT.status = 'NO_EXTENSION';
+  return EXT.ready;
+}
+function extPushTime(t, w) {   // w = 'HH:MM' or '' (cleared). Fire and forget, one at a time, only on change.
+  if (S.demo || !t || t.pending || t.parent || t.done) return;
+  const prev = EXT.sig[t.id] || '';
+  let date = t.due || null; const time = w || null;
+  if (time && !date) { const e = eventsForTask(t).filter(x => !x.allDay && !x.pending).sort((a, b) => a.start - b.start)[0]; date = e ? dkey(e.start) : null; if (!date) return; }
+  if (!time) { if (!prev) return; date = t.due || prev.split('|')[0]; }   // never set a time through the extension: nothing to clear
+  const sig = time ? date + '|' + time : '';
+  if (sig === prev) return;
+  const id = t.id;
+  EXT.queue = EXT.queue.then(() => extSend(id, date, time, sig)).catch(() => {});
+}
+async function extSend(id, date, time, sig) {
+  if (!(await extEnsure())) return;
+  const r = await extCall('set-time', { taskId: id, date, time, tz: TZ });
+  EXT.status = r.ok ? 'OK' : (r.code || 'ERROR');
+  if (r.ok) { if (sig) EXT.sig[id] = sig; else delete EXT.sig[id]; extSaveSig(); }
+  else if (r.code === 'NO_EXTENSION' || r.code === 'EXT_ERROR') EXT.ready = false;   // on any other failure keep the old signature so it retries next time
+}
+function extStatusText() {
+  if (S.demo) return 'Not used in demo mode.';
+  if (!EXT.ready) return EXT.status === 'NO_EXTENSION' ? 'Extension not detected (optional).' : 'Checking...';
+  return EXT.status && EXT.status !== 'OK' ? `Extension connected. Last result: ${EXT.status}. Details are in the extension popup.` : 'Extension connected.';
+}
+/* >>> EXT-BRIDGE END */
 async function syncTaskWhen(t) {
   if (!t || t.pending || t.parent) return;
   const w = whenFor(t);
   if (w !== (t.when || '')) await updateTask(t, { when: w }, { noEventSync: true });
+  extPushTime(t, w);   // NEW: also write the real time into Google Tasks via the extension (no-op without it)
 }
 /* Notifications: Google Tasks' API can't set a task's alert time, so each scheduled task's calendar block carries a popup reminder instead (Google Calendar app alerts you) */
 const remBody = () => (P.taskRemind >= 0 ? { useDefault: false, overrides: [{ method: 'popup', minutes: +P.taskRemind || 0 }] } : null);
@@ -2618,7 +2669,8 @@ function settingsModal(sec) {
           <div class="row2"><label>Working day starts<input type="time" name="ws" value="${esc(P.workStart)}"></label><label>Working day ends<input type="time" name="we" value="${esc(P.workEnd)}"></label></div>
           <div class="lab">Task reminder${ddField('trem', [[-1, 'Off'], [0, 'At start time'], [5, '5 min before'], [10, '10 min before'], [15, '15 min before'], [30, '30 min before'], [60, '1 hour before']], P.taskRemind)}</div>
           <div class="lab">Default block length${ddField('dur', [15, 30, 45, 60, 90].map(x => [x, fmtDur(x)]), P.defaultDuration)}</div>
-          <div class="lab">Calendar for task blocks${ddField('cal', cals.map(c => [c.id, c.name]), blockCal()?.id)}</div>`)}
+          <div class="lab">Calendar for task blocks${ddField('cal', cals.map(c => [c.id, c.name]), blockCal()?.id)}</div>
+          <div class="lab">Google Tasks time<span class="muted small" id="extStatus" style="font-weight:400">${esc(extStatusText())}</span></div>`)}
         ${sec_('appearance', `<h3>Appearance</h3>
           ${(() => {
             const row = (slot, title, hint) => `<div class="lab">${title}<span class="inline"><span class="thumb" id="thumb-${slot}" style="${slotUrl(slot) ? `background-image:url('${slotUrl(slot)}')` : ''}"></span><button type="button" class="btn sm" data-action="pickBg" data-slot="${slot}">${ic('image')}Upload image…</button><button type="button" class="btn sm ghost" data-action="clearBg" data-slot="${slot}">Remove</button></span><span class="muted small" style="font-weight:400">${hint}</span></div>`;
@@ -2640,6 +2692,7 @@ function settingsModal(sec) {
       </div></form>`,
     foot: `<button class="btn" type="button" data-action="closeModal">Close</button><button class="btn accent" type="submit" form="setf">Save changes</button>`,
     onMount() {
+      extEnsure().then(() => { const x = $('#extStatus'); if (x) x.textContent = extStatusText(); });
       $('#setf').onsubmit = e => {
         e.preventDefault();
         const f = new FormData(e.target), wkChanged = P.weekStart !== +f.get('wk') || P.defaultCalendar !== f.get('cal');
