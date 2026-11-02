@@ -862,6 +862,21 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
 @keyframes tl-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
 .dp-tl.anim{animation:tl-in .24s var(--ease)}
 .pop.dp{transition:top .26s var(--ease)}
+/* card dragging */
+.tcard[data-drag]{cursor:grab;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body.dnd,body.dnd *{cursor:grabbing!important;-webkit-user-select:none!important;user-select:none!important}
+body.dnd .tcard:hover{transform:none;box-shadow:var(--sh-card)}
+body.dnd .tc-acts{display:none!important}
+body.dnd .bcards{min-height:96px}
+body.dnd .bcards .empty{display:none}
+body.dnd .bcol{transition:background .2s,box-shadow .2s}
+.tcard.drag-ph{background:var(--accent-soft);border:1.5px dashed color-mix(in srgb,var(--accent) 60%,transparent);box-shadow:none;animation:none!important}
+.tcard.drag-ph>*{visibility:hidden}
+.tcard.drag-float{position:fixed;margin:0;z-index:200;pointer-events:none;border-color:transparent;will-change:left,top,transform;
+  box-shadow:0 18px 40px rgba(34,24,12,.22),0 4px 10px rgba(34,24,12,.12);transition:transform .2s var(--ease),box-shadow .2s var(--ease),opacity .2s;animation:none!important}
+.tcard.drag-float.lifted{transform:scale(1.035) rotate(1.4deg)}
+.tcard.drag-float.over-cal{transform:scale(.9) rotate(1.4deg);opacity:.92}
+.tcard.drag-float.landing{box-shadow:var(--sh-card);transform:none}
 .pill-btn{border:0;cursor:pointer;font-family:inherit;transition:background .15s,box-shadow .15s}
 .pill-btn:hover{box-shadow:var(--sh-xs);background:var(--surface-2)}
 button.tc-time{background:transparent;color:var(--ink-2);padding:1px 6px;border-radius:var(--r-sm)}
@@ -1052,7 +1067,7 @@ const DEFAULT_PREFS = {
   taskRemind: 0, theme: 'auto', workStart: '09:00', workEnd: '17:00', defaultDuration: 30, weekStart: 1,
   visibleCalendars: null, defaultCalendar: null, reflections: {}, listId: 'all', hint: '',
   lite: false, tideOpen: true, tideDays: 1, calMode: 'week', navCollapsed: false,
-  filters: { tasks: true, events: true, done: true }, trash: [], timer: null, unschedOpen: false, authMode: '', name: 'Abdu', mica: { window: 55, card: 25, cal: 50, windowBlur: 48, cardBlur: 34, calBlur: 40 },
+  order: {}, filters: { tasks: true, events: true, done: true }, trash: [], timer: null, unschedOpen: false, authMode: '', name: 'Abdu', mica: { window: 55, card: 25, cal: 50, windowBlur: 48, cardBlur: 34, calBlur: 40 },
   pomo: { focus: 25, break: 5, sound: true, stats: { date: '', sessions: 0, minutes: 0 } }
 };
 let P = { ...DEFAULT_PREFS };
@@ -2192,7 +2207,7 @@ function card(t, o = {}) {
   const time = whenStart ? `<button type="button" class="tc-time pill-btn" data-action="dateTimeTask" title="Change date &amp; time">${dkey(whenStart) === dayK ? '' : fmtDueLabel(dkey(whenStart)) + ' · '}${fmtTime(whenStart)}</button>` : '';
   const subHtml = subs.length ? `<ul class="tc-subs">${subs.slice(0, 6).map(s => `<li class="${s.done ? 'done' : ''}" data-sid="${esc(s.id)}"><button class="radio sm ${s.done ? 'on' : ''}" data-action="toggleSubCard" aria-label="${s.done ? 'Mark sub-task not done' : 'Mark sub-task done'}">${ic('check')}</button><span>${esc(s.title)}</span></li>`).join('')}${subs.length > 6 ? `<li class="more">+${subs.length - 6} more</li>` : ''}</ul>` : '';
   const k = tk(t);
-  return `<div class="tcard dtask ${t.done ? 'done' : ''} ${S.pulse === k ? 'pulse' : ''} ${S.fresh && S.fresh.has(k) ? 'fresh' : ''}" data-key="${esc(k)}" ${t.done ? '' : 'draggable="true"'} data-action="openTask">
+  return `<div class="tcard dtask ${t.done ? 'done' : ''} ${S.pulse === k ? 'pulse' : ''} ${S.fresh && S.fresh.has(k) ? 'fresh' : ''}" data-key="${esc(k)}" data-grp="${o.overdue ? 'od' : 'open'}" ${t.done ? '' : 'data-drag="1"'} data-action="openTask">
     <div class="tc-head"><button class="radio md ${t.done ? 'on' : ''}" data-action="toggleTask" aria-label="${t.done ? 'Mark not done' : 'Mark done'}">${ic('check')}</button>
       <div class="tc-title">${esc(t.title) || '<i class="muted">Untitled</i>'}</div>${time}</div>
     ${subHtml}${pills.length ? `<div class="tc-meta">${pills.join('')}</div>` : ''}
@@ -2203,9 +2218,9 @@ const estSum = ts => { const s = ts.reduce((a, t) => a + (t.isBreak ? 0 : t.est)
 /* ---------- Horizon board ---------- */
 function colHTML(k) {
   const today = todayKey(), st = dayStats(k), f = P.filters.done;
-  const open = tops().filter(t => listOk(t) && !t.done && t.due === k);
+  const open = ordered(k, tops().filter(t => listOk(t) && !t.done && t.due === k));
   const done = f ? tops().filter(t => listOk(t) && t.done && (t.due === k || (t.completedAt && dkey(new Date(t.completedAt)) === k && !t.due))) : [];
-  const overdue = k === today ? tops().filter(t => listOk(t) && !t.done && t.due && t.due < today) : [];
+  const overdue = k === today ? ordered(k, tops().filter(t => listOk(t) && !t.done && t.due && t.due < today)) : [];
   return `<section class="bcol ${k === S.day ? 'sel' : ''}" data-day="${k}">
     <div class="bhead"><button class="bdate" data-action="bdate" data-day="${k}"><span class="bday">${dayLabel(k)}${k === today ? '<i></i>' : ''}</span><span class="bdt">${esc(fmtDayMonth(k))}</span></button>
       ${st.planned ? `<span class="bcap ${st.over ? 'over' : ''}" title="Planned ${fmtDur(st.planned)} of ${fmtDur(st.avail)} available">${fmtDur(st.planned)}${st.over ? ' · over' : ''}</span>` : ''}</div>
@@ -2217,7 +2232,7 @@ function colHTML(k) {
     </div></section>`;
 }
 function unschedHTML() {
-  const ts = tops().filter(t => listOk(t) && !t.done && !t.due);
+  const ts = ordered('none', tops().filter(t => listOk(t) && !t.done && !t.due));
   const hasFresh = S.fresh && ts.some(t => S.fresh.has(tk(t)));
   const col = !P.unschedOpen;
   return `<section class="bcol unsched ${col ? 'collapsed' : ''}" data-day="">
@@ -2256,7 +2271,7 @@ function renderList() {
   const today = todayKey();
   let body = '';
   {
-    const open = tops().filter(t => listOk(t) && !t.done && t.due === today), od = tops().filter(t => listOk(t) && !t.done && t.due && t.due < today);
+    const open = ordered(today, tops().filter(t => listOk(t) && !t.done && t.due === today)), od = ordered(today, tops().filter(t => listOk(t) && !t.done && t.due && t.due < today));
     const done = tops().filter(t => listOk(t) && t.done && (t.due === today || (t.completedAt && dkey(new Date(t.completedAt)) === today)));
     const st = dayStats(today), total = Math.max(st.work, st.busy + st.planned) || 1, within = Math.min(st.planned, st.avail);
     body = `<div class="cap-card"><div><b>${fmtDur(st.planned)}</b> <span class="muted">of ${fmtDur(st.avail)} available</span></div>
@@ -3314,6 +3329,19 @@ document.addEventListener('dragstart', e => {
   S.dragKey = row.dataset.key; row.classList.add('dragging');
   e.dataTransfer.setData('text/plain', S.dragKey); e.dataTransfer.effectAllowed = 'copyMove';
 });
+/* ---------- visual ordering of cards (display only: never touches date, time or any task property) ---------- */
+function ordered(id, arr) {
+  const o = P.order && P.order[id]; if (!o || !o.length) return arr;
+  const pos = new Map(o.map((k, i) => [k, i]));
+  return arr.map((t, i) => [t, i]).sort((a, b) => ((pos.has(tk(a[0])) ? pos.get(tk(a[0])) : -1) - (pos.has(tk(b[0])) ? pos.get(tk(b[0])) : -1)) || a[1] - b[1]).map(x => x[0]);
+}
+function saveOrder(id, keys) {
+  if (!P.order) P.order = {};
+  P.order[id] = keys;
+  const cutoff = dkey(addDays(new Date(), -60));   // drop saved orders for long-past days
+  Object.keys(P.order).forEach(k => { if (/^\d{4}-/.test(k) && k < cutoff) delete P.order[k]; });
+  savePrefs();
+}
 function clearDrag() {
   S.dragKey = null; S.dragSub = null;
   $$('.dtask.dragging').forEach(x => x.classList.remove('dragging'));
@@ -3355,13 +3383,157 @@ document.addEventListener('drop', e => {
   if (!t) return;
   e.preventDefault();
   if (col) { const dur = t.est || P.defaultDuration; scheduleTask(t, dateAt(col.dataset.day, m), dur); }
-  else if (bcol) { const dd = bcol.dataset.day || null; updateTask(t, { due: dd }); toast(`Moved to ${dd ? fmtDueLabel(dd) : 'Unscheduled'}`, 'success', { ttl: 1800 }); }
+  else if (bcol) { const dd = bcol.dataset.day || null; if (dd === (t.due || null)) return; updateTask(t, { due: dd }); toast(`Moved to ${dd ? fmtDueLabel(dd) : 'Unscheduled'}`, 'success', { ttl: 1800 }); }
   else if (mc) { updateTask(t, { due: mc.dataset.day }); }
   else if (ni) {
     const v = ni.dataset.drop;
     if (v === 'today') updateTask(t, { due: todayKey() });
   }
 });
+
+/* ---------- card dragging: the card lifts and follows the pointer, the other cards slide out of the way ----------
+   Pointer-based (not the browser's drag image). Reordering is display-only; it never changes a task's date, time or any other property.
+   Dropping on another day moves the task there; dropping on the calendar panel schedules it; Esc cancels. */
+let CD = null;
+const swallowClick = e => { e.stopPropagation(); e.preventDefault(); };
+const cardColId = el => { const c = el.closest('.bcol'); return c ? (c.dataset.day || 'none') : todayKey(); };
+function dropSpot(container, grp, y, ph) {   // the node to insert the placeholder before (null = at the end)
+  const cards = $$(':scope > .tcard', container).filter(c => c !== ph && !c.classList.contains('done') && c.dataset.grp === grp);
+  for (const c of cards) { const r = c.getBoundingClientRect(); if (y < r.top + r.height / 2) return c; }
+  if (cards.length) return cards[cards.length - 1].nextSibling;
+  if (grp === 'open') return $$(':scope > .tcard.done', container)[0] || null;
+  return ph.nextSibling;
+}
+function flipMove(containers, mutate) {   // animate every card that shifts when mutate() changes the layout
+  const els = [...new Set(containers)].flatMap(c => $$(':scope > .tcard', c)).filter(x => !x.classList.contains('drag-ph'));
+  const first = new Map(els.map(x => [x, x.getBoundingClientRect().top]));
+  mutate();
+  const moved = els.filter(x => { const dy = first.get(x) - x.getBoundingClientRect().top; if (Math.abs(dy) < 1) return false; x.style.transition = 'none'; x.style.transform = `translateY(${dy}px)`; return true; });
+  if (!moved.length) return;
+  void document.body.offsetHeight;
+  moved.forEach(x => { x.style.transition = 'transform .24s cubic-bezier(.22,.8,.24,1)'; x.style.transform = ''; setTimeout(() => { x.style.transition = ''; }, 300); });
+}
+document.addEventListener('pointerdown', e => {
+  if (CD || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  const card = e.target.closest && e.target.closest('.tcard[data-drag]');
+  if (!card || e.target.closest('button,a,input,textarea,select,.tc-acts') || !(card.closest('.bcards') || card.closest('.stack'))) return;
+  const t = taskByKey(card.dataset.key); if (!t || t.pending) return;
+  const r = card.getBoundingClientRect();
+  CD = { card, key: card.dataset.key, pid: e.pointerId, type: e.pointerType, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, offX: e.clientX - r.left, offY: e.clientY - r.top,
+    started: false, armed: e.pointerType !== 'touch', srcCol: cardColId(card), srcGrp: card.dataset.grp, origParent: card.parentNode, origNext: card.nextSibling, mode: 'place', target: null };
+  if (!CD.armed) CD.timer = setTimeout(() => { if (CD && !CD.started) { CD.armed = true; navigator.vibrate && navigator.vibrate(10); startCardDrag(); moveFloat(); updateCardTarget(); } }, 300);
+  try { card.setPointerCapture(e.pointerId); } catch (er) {}
+});
+function startCardDrag() {
+  const d = CD; d.started = true;
+  const r = d.card.getBoundingClientRect(), f = d.card.cloneNode(true);
+  f.removeAttribute('data-key'); f.removeAttribute('data-action'); f.classList.add('drag-float'); f.classList.remove('pulse', 'fresh');
+  f.style.left = r.left + 'px'; f.style.top = r.top + 'px'; f.style.width = r.width + 'px';
+  document.body.appendChild(f); d.float = f;
+  d.card.classList.add('drag-ph'); document.body.classList.add('dnd');
+  closePop(true);
+  requestAnimationFrame(() => f.classList.add('lifted'));
+  d.raf = requestAnimationFrame(tickCardDrag);
+}
+const moveFloat = () => { const d = CD; if (d && d.float) { d.float.style.left = (d.x - d.offX) + 'px'; d.float.style.top = (d.y - d.offY) + 'px'; } };
+function updateCardTarget() {
+  const d = CD; if (!d || !d.started) return;
+  const el = document.elementFromPoint(d.x, d.y);   // the floating copy ignores the pointer, so this sees what is underneath
+  const dc = el && el.closest('.dcol'), ni = el && el.closest('.ni[data-drop]'), bc = el && el.closest('.bcol'), st = el && el.closest('.stack');
+  $$('.bcol.drop,.ni.drop').forEach(x => x.classList.remove('drop'));
+  $$('.dropghost').forEach(g => (g.hidden = true));
+  d.float.classList.toggle('over-cal', !!(dc || ni));
+  if (dc) {
+    const t = taskByKey(d.key), dur = t && t.est ? t.est : P.defaultDuration, m = dropMinutes({ clientY: d.y }, dc, dur), g = $('.dropghost', dc);
+    d.mode = 'cal'; d.target = dc.dataset.day; d.minutes = m;
+    g.hidden = false; g.style.top = `calc(var(--hh) * ${m / 60})`; g.style.height = `calc(var(--hh) * ${dur / 60} - 2px)`; g.textContent = `${fmtTime(dateAt(dc.dataset.day, m))} · ${fmtDur(dur)}`;
+    return;
+  }
+  if (ni) { d.mode = 'nav'; d.target = ni; ni.classList.add('drop'); return; }
+  if (bc && bc.classList.contains('collapsed')) { d.mode = 'collapsed'; d.target = bc; bc.classList.add('drop'); return; }
+  const container = bc ? $('.bcards', bc) : st;
+  d.mode = 'place';
+  if (!container) return;   // between columns: leave the placeholder where it is
+  const colId = bc ? (bc.dataset.day || 'none') : todayKey();
+  if (bc && colId !== d.srcCol) bc.classList.add('drop');
+  const ph = d.card;
+  if (ph.parentNode === container) { const r = ph.getBoundingClientRect(); if (d.y >= r.top && d.y <= r.bottom) return; }   // inside its own slot: no change (stops flicker)
+  const grp = colId === d.srcCol ? d.srcGrp : 'open';
+  let ref = dropSpot(container, grp, d.y, ph); if (ref === ph) ref = ph.nextSibling;
+  if (ph.parentNode === container && ph.nextSibling === ref) return;
+  ph.dataset.grp = grp;
+  flipMove([ph.parentNode, container], () => container.insertBefore(ph, ref));
+}
+function tickCardDrag() {
+  const d = CD; if (!d || !d.started) return;
+  const edge = (v, lo, hi) => (v < lo + 56 ? -Math.min(20, Math.ceil((lo + 56 - v) / 3)) : v > hi - 56 ? Math.min(20, Math.ceil((v - (hi - 56)) / 3)) : 0);
+  let moved = false;
+  const cont = d.card.parentNode, sc = cont && (cont.classList.contains('bcards') ? cont : cont.closest && cont.closest('.pagescroll'));
+  if (sc) { const r = sc.getBoundingClientRect(), dy = edge(d.y, r.top, r.bottom); if (dy) { sc.scrollTop += dy; moved = true; } }
+  const b = $('#board');
+  if (b) { const r = b.getBoundingClientRect(); if (d.y > r.top && d.y < r.bottom) { const dx = edge(d.x, r.left, r.right); if (dx) { b.scrollLeft += dx; moved = true; } } }
+  if (moved) updateCardTarget();
+  d.raf = requestAnimationFrame(tickCardDrag);
+}
+document.addEventListener('pointermove', e => {
+  const d = CD; if (!d || e.pointerId !== d.pid) return;
+  d.x = e.clientX; d.y = e.clientY;
+  if (!d.started) {
+    const dist = Math.hypot(d.x - d.x0, d.y - d.y0);
+    if (!d.armed) { if (dist > 8) { clearTimeout(d.timer); try { d.card.releasePointerCapture(d.pid); } catch (er) {} CD = null; } return; }
+    if (dist < 5) return;
+    startCardDrag();
+  }
+  moveFloat(); updateCardTarget();
+});
+document.addEventListener('pointerup', e => {
+  const d = CD; if (!d || e.pointerId !== d.pid) return;
+  if (!d.started) { clearTimeout(d.timer); try { d.card.releasePointerCapture(d.pid); } catch (er) {} CD = null; return; }
+  endCardDrag(true);
+});
+document.addEventListener('pointercancel', e => { if (CD && e.pointerId === CD.pid) { if (CD.started) endCardDrag(false); else { clearTimeout(CD.timer); CD = null; } } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && CD && CD.started) { e.stopPropagation(); endCardDrag(false); } }, true);
+document.addEventListener('touchmove', e => { if (CD && CD.started && e.cancelable) e.preventDefault(); }, { passive: false });
+function endCardDrag(commit) {
+  const d = CD; if (!d) return; CD = null;
+  cancelAnimationFrame(d.raf); clearTimeout(d.timer);
+  try { d.card.releasePointerCapture(d.pid); } catch (er) {}
+  document.addEventListener('click', swallowClick, true); setTimeout(() => document.removeEventListener('click', swallowClick, true), 80);
+  S.justDragged = true; setTimeout(() => (S.justDragged = false), 150);
+  $$('.bcol.drop,.ni.drop').forEach(x => x.classList.remove('drop')); $$('.dropghost').forEach(g => (g.hidden = true));
+  const t = taskByKey(d.key), ph = d.card; let apply = null, revert = true;
+  if (commit && t) {
+    if (d.mode === 'cal') { const day = d.target, m = d.minutes; apply = () => scheduleTask(t, dateAt(day, m), t.est || P.defaultDuration); }
+    else if (d.mode === 'nav') { if (d.target.dataset.drop === 'today' && t.due !== todayKey()) apply = () => { updateTask(t, { due: todayKey() }); toast('Moved to Today', 'success', { ttl: 1800 }); }; }
+    else if (d.mode === 'collapsed') { if (t.due) apply = () => { updateTask(t, { due: null }); toast('Moved to Unscheduled', 'success', { ttl: 1800 }); }; }
+    else {
+      const cont = ph.parentNode, bc = cont.closest && cont.closest('.bcol'), colId = bc ? (bc.dataset.day || 'none') : todayKey();
+      if (cont !== d.origParent || ph.nextSibling !== d.origNext) {
+        const keys = $$(':scope > .tcard[data-key]', cont).filter(c => !c.classList.contains('done')).map(c => c.dataset.key);
+        revert = false;
+        apply = () => {
+          saveOrder(colId, keys);
+          if (colId !== d.srcCol && bc) { const day = bc.dataset.day || null; updateTask(t, { due: day }); toast(`Moved to ${day ? fmtDueLabel(day) : 'Unscheduled'}`, 'success', { ttl: 1800 }); }
+        };
+      }
+    }
+  }
+  if (revert && ph.parentNode) {   // nothing to keep: slide the slot back to where the card came from
+    const home = d.origParent, ref = d.origNext && d.origNext.parentNode === home ? d.origNext : null;
+    if (ph.parentNode !== home || ph.nextSibling !== ref) flipMove([ph.parentNode, home], () => home.insertBefore(ph, ref));
+    ph.dataset.grp = d.srcGrp;
+  }
+  const f = d.float, r = ph.getBoundingClientRect();   // land the floating card in its slot, then rebuild from real data
+  f.classList.remove('lifted', 'over-cal'); f.classList.add('landing');
+  f.style.transition = 'left .24s var(--ease), top .24s var(--ease), width .24s var(--ease), transform .24s var(--ease), box-shadow .24s, opacity .2s';
+  f.style.left = r.left + 'px'; f.style.top = r.top + 'px'; f.style.width = r.width + 'px';
+  setTimeout(() => {
+    document.body.classList.remove('dnd');
+    if (apply) apply();
+    render();
+    f.remove();
+  }, 250);
+}
 
 /* ---------- create an event by double-click (tap on touch) ---------- */
 const coarse = matchMedia('(pointer:coarse)').matches;
