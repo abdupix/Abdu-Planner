@@ -221,8 +221,6 @@ html.has-bg .nav-search input{background:var(--glass-hi)}
 .lc-sw button[data-c]:not(.lc-auto):hover{transform:scale(1.15)}
 .lc-sw button.on{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink-2)}
 .lc-auto{border:0;background:transparent;color:var(--ink-2);font-size:12px;cursor:pointer;padding:2px 6px;border-radius:var(--r-sm)}.lc-auto:hover{background:var(--surface)}
-.tcard::before{content:'';position:absolute;left:0;top:13px;bottom:13px;width:3px;border-radius:0 3px 3px 0;background:var(--lc,transparent);opacity:.9}
-.tcard.done::before{opacity:.35}
 .tcard[draggable=true]{cursor:grab}
 .tcard.dragging{opacity:.4;transform:scale(.97)}
 .tcard.pulse{animation:land .38s var(--ease)}
@@ -2240,7 +2238,7 @@ function card(t, o = {}) {
   const time = whenStart ? `<button type="button" class="tc-time pill-btn" data-action="dateTimeTask" title="Change date &amp; time">${dkey(whenStart) === dayK ? '' : fmtDueLabel(dkey(whenStart)) + ' · '}${fmtTime(whenStart)}</button>` : '';
   const subHtml = subs.length ? `<ul class="tc-subs">${subs.slice(0, 6).map(s => `<li class="${s.done ? 'done' : ''}" data-sid="${esc(s.id)}"><button class="radio sm ${s.done ? 'on' : ''}" data-action="toggleSubCard" aria-label="${s.done ? 'Mark sub-task not done' : 'Mark sub-task done'}">${ic('check')}</button><span>${esc(s.title)}</span></li>`).join('')}${subs.length > 6 ? `<li class="more">+${subs.length - 6} more</li>` : ''}</ul>` : '';
   const k = tk(t);
-  return `<div class="tcard dtask ${t.done ? 'done' : ''} ${S.pulse === k ? 'pulse' : ''} ${S.fresh && S.fresh.has(k) ? 'fresh' : ''}" data-key="${esc(k)}" style="--lc:${esc(listColor(t.list))}" data-grp="${o.overdue ? 'od' : 'open'}" ${t.done ? '' : 'data-drag="1"'} data-action="openTask">
+  return `<div class="tcard dtask ${t.done ? 'done' : ''} ${S.pulse === k ? 'pulse' : ''} ${S.fresh && S.fresh.has(k) ? 'fresh' : ''}" data-key="${esc(k)}" data-grp="${o.overdue ? 'od' : 'open'}" ${t.done ? '' : 'data-drag="1"'} data-action="openTask">
     <div class="tc-head"><button class="radio md ${t.done ? 'on' : ''}" data-action="toggleTask" aria-label="${t.done ? 'Mark not done' : 'Mark done'}">${ic('check')}</button>
       <div class="tc-title">${esc(t.title) || '<i class="muted">Untitled</i>'}</div>${time}</div>
     ${subHtml}${pills.length ? `<div class="tc-meta">${pills.join('')}</div>` : ''}
@@ -2555,11 +2553,12 @@ function datePicker(anchor, { value, onPick, onClear, align, time, keepOpen }) {
     el.addEventListener('input', e => {   // typing narrows the list to times that start with what you typed (4: -> 4:00, 4:30 ...)
       if (!e.target.matches || !e.target.matches('[data-dp-tin]')) return;
       const q = e.target.value.toLowerCase().replace(/\s/g, '');
-      $$('.dd-opt', el).forEach(o => { o.hidden = !!q && !o.dataset.l.startsWith(q); });
+      $$('.dd-opt', el).forEach(o => { o.hidden = !timeMatches(o.dataset.l, q); });
     });
     el.addEventListener('keydown', e => {
       if (e.key !== 'Enter' || !e.target.matches || !e.target.matches('[data-dp-tin]')) return;
-      e.preventDefault(); const v = parseClock(e.target.value);
+      e.preventDefault(); let v = parseClock(e.target.value);
+      if (v == null) { const f = $$('.dd-opt:not([hidden])', el)[0]; if (f && e.target.value.trim()) v = f.dataset.v; }
       if (v == null) { e.target.style.boxShadow = 'inset 0 -2px 0 var(--warn)'; return; }
       setT(v);
     });
@@ -2589,6 +2588,12 @@ function parseDurInput(str) {
   if (/^\d+$/.test(x)) return +x || null;
   return null;
 }
+/* Does a time label like "6:00 pm" match what was typed? "6", "6p", "6pm", "6:", "6:3" and "6:30pm" all do; the ":00" is optional. */
+function timeMatches(label, typed) {
+  const l = String(label).toLowerCase().replace(/\s/g, ''), q = String(typed).toLowerCase().replace(/[\s.]/g, '');
+  if (!q) return true;
+  return l.startsWith(q) || l.replace(':00', '').startsWith(q);
+}
 function parseClock(str) {
   const x = String(str).trim().toLowerCase().replace(/\./g, ''); const m = x.match(/^(\d{1,2})(?::?(\d{2}))?\s*(am|pm)?$/); if (!m) return null;
   let h = +m[1]; const mi = +(m[2] || 0);
@@ -2611,11 +2616,12 @@ function openDropdown(anchor, { options, value, onPick, custom, clear, align = '
       inp.focus();
       inp.addEventListener('input', () => {   // narrow the list to options that start with what is typed (4: -> 4:00 am, 4:30 am)
         const q = inp.value.toLowerCase().replace(/\s/g, ''); inp.style.boxShadow = '';
-        $$('.dd-opt', el).forEach(o => { o.hidden = !!q && !o.textContent.toLowerCase().replace(/\s/g, '').startsWith(q); });
+        $$('.dd-opt', el).forEach(o => { o.hidden = !timeMatches(o.textContent, inp.value); });
       });
       inp.addEventListener('keydown', e => {
         if (e.key !== 'Enter') return; e.preventDefault();
-        const v = custom.parse(inp.value);
+        let v = custom.parse(inp.value);
+        if (v == null) { const first = $$('.dd-opt:not([hidden])', el)[0]; if (first && inp.value.trim()) { const orig = options.find(x => String(x[0]) === first.dataset.v); pick(orig ? orig[0] : first.dataset.v); return; } }
         if (v == null) { inp.style.boxShadow = 'inset 0 -2px 0 var(--warn)'; return; }
         pick(v);
       });
@@ -2807,7 +2813,7 @@ function settingsModal(sec) {
           <div class="lab">Calendar for task blocks${ddField('cal', cals.map(c => [c.id, c.name]), blockCal()?.id)}</div>
           <div class="lab">Google Tasks time<span class="muted small" id="extStatus" style="font-weight:400">${esc(extStatusText())}</span></div>
           <label class="check"><input type="checkbox" name="keepnote" ${P.keepNoteTime ? 'checked' : ''}>Also keep the “⏰ HH:MM” line in task notes (off = removed once Google has the real time)</label>`)}
-        ${sec_('lists', `<h3>Task lists</h3><p class="muted small" style="margin:-4px 0 0">Give each Google Tasks list its own colour. It shows on its cards and on the calendar. Changes apply instantly.</p>
+        ${sec_('lists', `<h3>Task lists</h3><p class="muted small" style="margin:-4px 0 0">Give each Google Tasks list its own colour. It shows on tasks in the calendar view. Changes apply instantly.</p>
           ${S.lists.length ? S.lists.map(l => `<div class="lc-row" data-list="${esc(l.id)}"><div class="lc-name"><i style="background:${esc(listColor(l.id))}"></i>${esc(l.title)}</div><div class="lc-sw">${Object.values(EVENT_COLORS).map(x => x[1]).map(h => `<button type="button" class="${listColor(l.id).toLowerCase() === h ? 'on' : ''}" data-action="listColor" data-c="${h}" style="--c:${h}" aria-label="Colour ${h}"></button>`).join('')}<button type="button" class="lc-auto" data-action="listColor" data-c="" title="Automatic colour">Auto</button></div></div>`).join('') : '<p class="muted">Your task lists will appear here once they load.</p>'}`)}
         ${sec_('appearance', `<h3>Appearance</h3>
           ${(() => {
