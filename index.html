@@ -859,6 +859,12 @@ html.has-bg[data-navtone="dark"] .nav{--nav-ink:#111;--nav-ink-2:#46433f;--nav-i
   .calwrap{transition:padding-right .5s var(--ease)}
   .shell.ev-open[data-view="calendar"] .calwrap{padding-right:calc(var(--tide-w) + var(--ev-gap,0px))}
 }
+@keyframes tl-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.dp-tl.anim{animation:tl-in .24s var(--ease)}
+.pop.dp{transition:top .26s var(--ease)}
+.pill-btn{border:0;cursor:pointer;font-family:inherit;transition:background .15s,box-shadow .15s}
+.pill-btn:hover{box-shadow:var(--sh-xs);background:var(--surface-2)}
+button.tc-time{background:transparent;color:var(--ink-2);padding:1px 6px;border-radius:var(--r-sm)}
 /* Lite mode: no live blur layers at all */
 html.lite .canvas,html.lite .tide,html.lite .pomo-ic,html.lite .pomo-sq,html.lite .pomo-tabs,html.lite .nav,html.lite .backdrop{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 html.lite .canvas{background:var(--canvas)}
@@ -1085,7 +1091,7 @@ let taskIdx = new Map();
 const tk = t => t.list + ':' + t.id;
 const idx = () => { taskIdx = new Map(S.tasks.map(t => [tk(t), t])); };
 const taskByKey = k => S.tasks.find(t => tk(t) === k);
-const evByKey = k => S.events.find(e => e.key === k);
+const evByKey = k => S.events.find(e => e.key === k) || (String(k).startsWith('task|') ? taskBlocksAsEvents().find(e => e.key === k) : null);
 const taskOf = e => (e.taskId ? taskIdx.get(e.taskList + ':' + e.taskId) || null : null);
 const eventsForTask = t => S.events.filter(e => e.taskId === t.id && e.taskList === t.list);
 const listName = id => S.lists.find(l => l.id === id)?.title || 'Tasks';
@@ -1097,7 +1103,7 @@ const writableCals = () => S.calendars.filter(c => c.role === 'owner' || c.role 
 const blockCal = () => writableCals().find(c => c.id === P.defaultCalendar) || writableCals().find(c => c.primary) || writableCals()[0];
 const isVisible = c => (blockCal() && c.id === blockCal().id) || (P.visibleCalendars ? P.visibleCalendars.includes(c.id) : (c.selected || c.primary));
 const visibleEvents = () => S.events.filter(e => { const c = S.calendars.find(x => x.id === e.cal); return !e.declined && (c ? isVisible(c) : true); });
-const displayEvents = () => visibleEvents().filter(e => { const t = taskOf(e); return t ? (P.filters.tasks && (P.filters.done || !t.done)) : P.filters.events; });
+const displayEvents = () => [...visibleEvents(), ...taskBlocksAsEvents()].filter(e => { const t = taskOf(e); return t ? (P.filters.tasks && (P.filters.done || !t.done)) : P.filters.events; });
 
 /* ======================================================================
    Auth — Google Identity Services token flow (+ remembered session)
@@ -1811,8 +1817,29 @@ async function fetchCalEvents(c, from, to) {
   }
   return out;
 }
+/* ---------- local calendar cache (IndexedDB): the calendar opens instantly and works offline; the web copy only refreshes when online ---------- */
+const EVC_KEY = 'evcache.v1';
+let evcT = null;
+function evCacheSave() {
+  if (S.demo) return;
+  clearTimeout(evcT);
+  evcT = setTimeout(() => {
+    try {
+      const events = S.events.filter(e => !e.pending && !String(e.id).startsWith('tmp_')).map(e => ({ ...e, start: +e.start, end: +e.end }));
+      idb.set(EVC_KEY, { saved: Date.now(), calendars: S.calendars, events });
+    } catch (e) { /* cache is best-effort */ }
+  }, 800);
+}
+async function evCacheLoad() {
+  if (S.demo) return null;
+  try {
+    const c = await idb.get(EVC_KEY); if (!c || !Array.isArray(c.events)) return null;
+    return { saved: c.saved, calendars: c.calendars || [], events: c.events.map(e => ({ ...e, start: new Date(e.start), end: new Date(e.end) })) };
+  } catch (e) { return null; }
+}
 let lastEvErr = 0;
 async function loadWeek(wk) {
+  if (!S.demo && !navigator.onLine) return;   // offline: keep showing the local copy; the 'online' listener refetches
   S.loadedWeeks.add(wk);
   const from = fromKey(wk), to = addDays(from, 7), cals = S.calendars.filter(isVisible);
   const res = await Promise.allSettled(cals.map(c => fetchCalEvents(c, from, to)));
@@ -1825,6 +1852,7 @@ async function loadWeek(wk) {
   const seen = new Set(keep.map(e => e.key));
   S.events = [...keep, ...fresh.filter(e => !seen.has(e.key))];
   if (evSig() !== sig0) render();   // skip the full redraw when nothing changed
+  if (!bad) evCacheSave();
   reconcileTaskTimes();
 }
 const evSig = () => S.events.map(e => [e.key, e.title, +e.start, +e.end, e.color, e.desc, e.loc, e.free, e.pending ? 1 : 0, (e.attendees || []).length].join('|')).join('\n');
@@ -1887,9 +1915,19 @@ async function deleteEvent(ev) {
   finally { S.pending--; }
 }
 /* Scheduled time -> Google Tasks. The Tasks API cannot store a time of day, so it goes in the task's notes as "🕘 9:00 AM – 10:00 AM". */
-function whenFor(t) {
+function whenFor(t) {   // tasks are no longer saved as calendar events: the time lives on the task (t.when). Old linked blocks, if any, still win.
   const evs = eventsForTask(t).filter(e => !e.allDay && !e.pending && (!t.due || dkey(e.start) === t.due)).sort((a, b) => a.start - b.start);
-  return evs.length ? `${pad(evs[0].start.getHours())}:${pad(evs[0].start.getMinutes())}` : '';
+  return evs.length ? `${pad(evs[0].start.getHours())}:${pad(evs[0].start.getMinutes())}` : (t.when || '');
+}
+/* Tasks with a date + time appear on the timeline as read-only blocks drawn from the task itself (nothing is written to Google Calendar). */
+function taskBlocksAsEvents() {
+  if (!P.filters.tasks) return [];
+  const linked = new Set(S.events.filter(e => e.taskId).map(e => e.taskList + ':' + e.taskId));
+  return S.tasks.filter(t => !t.parent && t.due && t.when && !t.pending && !linked.has(tk(t)) && (P.filters.done || !t.done)).map(t => {
+    const start = dateAt(t.due, hm2min(t.when)), end = new Date(+start + (t.est || P.defaultDuration) * 60000);
+    return { key: 'task|' + tk(t), id: t.id, cal: '', calName: 'Tasks', color: 'var(--accent)', calColor: 'var(--accent)', colorId: '', title: t.title, noTitle: false, start, end, allDay: false, editable: false,
+      desc: '', attendees: [], creator: null, organizer: null, attachments: [], meet: '', visibility: 'default', reminders: null, rrule: '', declined: false, free: false, link: '', loc: '', recurring: false, taskList: t.list, taskId: t.id, virtual: true };
+  });
 }
 /* >>> EXT-BRIDGE START: optional Chrome/Edge extension that writes the real time into Google Tasks (private endpoint, see extension/README.md). Silent if the extension is absent. */
 const EXT = { ready: false, lastPing: 0, queue: Promise.resolve(), sig: {}, tried: {}, status: '' };
@@ -1959,8 +1997,7 @@ async function syncTaskWhen(t) {
   const w = whenFor(t);
   // Once Google has accepted this exact time through the extension, the "⏰ HH:MM" notes line is redundant, so drop it
   // (unless Settings -> "Keep ⏰ line in notes" is on). Until then the line stays as the fallback.
-  const viaExt = !S.demo && !P.keepNoteTime && !!w && EXT.sig[t.id] === extSigFor(t, w);
-  const want = viaExt ? '' : w;
+  const want = w;   // keep the ⏰ line: it is what draws the task on the timeline now
   if (want !== (t.when || '')) await updateTask(t, { when: want }, { noEventSync: true });
   extPushTime(t, w);   // also write the real time into Google Tasks via the extension (no-op without it)
 }
@@ -1973,13 +2010,11 @@ function reconcileTaskTimes() {   // after calendars load: keep every task's tim
   clearTimeout(reconT);
   reconT = setTimeout(async () => {
     if (S.pending > 0 || DRAG) return;
-    for (const t of S.tasks.slice()) {
-      if (t.done || t.parent || t.pending) continue;
-      const linked = eventsForTask(t).length > 0;
-      if (!linked && !(t.when && t.due && S.loadedWeeks.has(weekStartKey(t.due)))) continue;
-      if (whenFor(t) !== (t.when || '') || (t.when && !P.keepNoteTime && !S.demo)) await syncTaskWhen(t);   // 2nd condition: migrate old "⏰" lines once the extension has pushed the time
+    for (const t of S.tasks.slice()) {   // only tasks that still have an old linked calendar block need their time re-synced
+      if (t.done || t.parent || t.pending || !eventsForTask(t).length) continue;
+      if (whenFor(t) !== (t.when || '')) await syncTaskWhen(t);
     }
-    const want = remBody();
+    const want = null;   // task reminders on calendar blocks are retired along with the blocks
     if (want) for (const e of S.events.slice()) {   // add the reminder to task blocks that don't have it yet (future ones only)
       const t = taskOf(e); if (!t || t.done || !e.editable || e.pending || e.allDay || e.end < new Date() || remOk(e) || remTried.has(e.key + want.overrides[0].minutes)) continue;
       remTried.add(e.key + want.overrides[0].minutes);
@@ -2007,17 +2042,28 @@ function findSlot(key, dur) {
 }
 async function scheduleTask(t, start, dur) {
   if (t.done) { toast('That task is already done', 'info'); return; }
-  const ev = await createEvent({ title: t.title, start, end: new Date(+start + dur * 60000), task: t, description: t.notes || undefined });
-  if (ev && t.due !== dkey(start)) await updateTask(t, { due: dkey(start) }, { noEventSync: true });
-  if (ev) await syncTaskWhen(t);
+  // No calendar event is created: the date goes in Google Tasks' due date and the time in the task itself.
+  const ch = { when: min2hm(minOfDay(start)) };
+  if (t.due !== dkey(start)) ch.due = dkey(start);
+  if (!t.est) ch.est = dur;
+  await updateTask(t, ch, { noEventSync: true });
+  extPushTime(t, ch.when);
 }
 async function setTaskTime(t, v) {
   if (!v) return;
   const day = t.due || S.day;
-  if (!t.due) await updateTask(t, { due: day });
-  const start = dateAt(day, hm2min(v)), ev = eventsForTask(t).find(e => dkey(e.start) === day);
-  if (ev && ev.editable) await updateEvent(ev, { start, end: new Date(+start + (ev.end - ev.start)) });
-  else if (!ev) await scheduleTask(t, start, t.est || P.defaultDuration);
+  await updateTask(t, { ...(t.due ? {} : { due: day }), when: v }, { noEventSync: true });
+  extPushTime(t, v);
+}
+async function setTaskDateTime(t, { due, when }) {   // one call for the merged date/time picker
+  const ch = {};
+  if (due !== undefined && due !== t.due) ch.due = due;
+  if (when !== undefined && when !== (t.when || '')) ch.when = when;
+  if (ch.due === null) ch.when = '';   // no date means no time
+  if (ch.due === undefined && ch.when && !t.due) ch.due = S.day;
+  if (!Object.keys(ch).length) return;
+  await updateTask(t, ch, { noEventSync: true });
+  if ('when' in ch || 'due' in ch) extPushTime(t, t.when || '');
 }
 
 /* ======================================================================
@@ -2063,6 +2109,7 @@ function render() {
   sh.classList.toggle('nav-open', S.navOpen); sh.classList.toggle('nav-collapsed', !!P.navCollapsed);
   $$('.mobtabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.mob));
   renderNav(); renderMain(); renderTide(); renderEvPanel(); renderTimerPill(); updateNow(); needWeeks();
+  if (S.loaded && !S.loading) evCacheSave();
 }
 const NAV = [['horizon', 'Horizon', 'horizon'], ['today', 'Today', 'today']];
 function renderNav() {
@@ -2137,18 +2184,19 @@ function card(t, o = {}) {
   if (t.est) pills.push(`<span class="pill">${fmtDur(t.est)}</span>`);
   if (t.priority) pills.push(`<span class="pill pr-${esc(t.priority)}">${ic('flag')}${esc(cap(t.priority))}</span>`);
   if (t.repeat) pills.push(`<span class="pill">${ic('repeat')}${esc(cap(t.repeat))}</span>`);
-  if (o.showDue && t.due) pills.push(`<span class="pill ${t.due < todayKey() && !t.done ? 'warn' : ''}">${fmtDueLabel(t.due)}</span>`);
-  if (o.overdue && t.due) pills.push(`<span class="pill warn">Due ${fmtDueLabel(t.due)}</span>`);
+  if (o.showDue && t.due) pills.push(`<button type="button" class="pill pill-btn ${t.due < todayKey() && !t.done ? 'warn' : ''}" data-action="dateTimeTask" title="Change date &amp; time">${fmtDueLabel(t.due)}</button>`);
+  if (o.overdue && t.due) pills.push(`<button type="button" class="pill pill-btn warn" data-action="dateTimeTask" title="Change date &amp; time">Due ${fmtDueLabel(t.due)}</button>`);
   if (o.showList && S.lists.length > 1) pills.push(`<span class="pill">${esc(trunc(listName(t.list), 18))}</span>`);
   if (P.timer && P.timer.key === tk(t)) pills.push(`<span class="pill acc">● Running</span>`);
-  const time = ev ? `<span class="tc-time">${dkey(ev.start) === dayK ? '' : fmtDueLabel(dkey(ev.start)) + ' · '}${fmtTime(ev.start)}</span>` : '';
+  const whenStart = ev ? ev.start : (t.when && t.due ? dateAt(t.due, hm2min(t.when)) : null);
+  const time = whenStart ? `<button type="button" class="tc-time pill-btn" data-action="dateTimeTask" title="Change date &amp; time">${dkey(whenStart) === dayK ? '' : fmtDueLabel(dkey(whenStart)) + ' · '}${fmtTime(whenStart)}</button>` : '';
   const subHtml = subs.length ? `<ul class="tc-subs">${subs.slice(0, 6).map(s => `<li class="${s.done ? 'done' : ''}" data-sid="${esc(s.id)}"><button class="radio sm ${s.done ? 'on' : ''}" data-action="toggleSubCard" aria-label="${s.done ? 'Mark sub-task not done' : 'Mark sub-task done'}">${ic('check')}</button><span>${esc(s.title)}</span></li>`).join('')}${subs.length > 6 ? `<li class="more">+${subs.length - 6} more</li>` : ''}</ul>` : '';
   const k = tk(t);
   return `<div class="tcard dtask ${t.done ? 'done' : ''} ${S.pulse === k ? 'pulse' : ''} ${S.fresh && S.fresh.has(k) ? 'fresh' : ''}" data-key="${esc(k)}" ${t.done ? '' : 'draggable="true"'} data-action="openTask">
     <div class="tc-head"><button class="radio md ${t.done ? 'on' : ''}" data-action="toggleTask" aria-label="${t.done ? 'Mark not done' : 'Mark done'}">${ic('check')}</button>
       <div class="tc-title">${esc(t.title) || '<i class="muted">Untitled</i>'}</div>${time}</div>
     ${subHtml}${pills.length ? `<div class="tc-meta">${pills.join('')}</div>` : ''}
-    <div class="tc-acts"><button class="icon-btn" data-action="pickTaskDate" title="Set date" aria-label="Set date">${ic('cal')}</button>${t.done ? '' : `<button class="icon-btn" data-action="schedTask" title="Schedule on calendar" aria-label="Schedule on calendar">${ic('clock')}</button>`}<button class="icon-btn" data-action="delTask" title="Delete" aria-label="Delete task">${ic('trash')}</button></div></div>`;
+    <div class="tc-acts"><button class="icon-btn" data-action="dateTimeTask" title="Set date &amp; time" aria-label="Set date and time">${ic('cal')}</button><button class="icon-btn" data-action="delTask" title="Delete" aria-label="Delete task">${ic('trash')}</button></div></div>`;
 }
 const estSum = ts => { const s = ts.reduce((a, t) => a + (t.isBreak ? 0 : t.est), 0); return s ? fmtDur(s) : ''; };
 
@@ -2414,9 +2462,8 @@ function renderCalendar() {
   } else grid = `<div class="tl-wrap" id="calTL">${calStripHTML()}</div>`;
   return `<header class="mh"><button class="icon-btn menu-btn" data-action="toggleNav" aria-label="Menu">${ic('menu')}</button><h1>Calendar</h1><span class="grow"></span><button class="btn sm" data-action="collapseCal" title="Back to Horizon">${ic('shrink')}Back to board</button></header>
     <div class="calwrap">${side}<div class="calmain"><div class="cal-tools">
-      <button class="icon-btn" data-action="calPrev" aria-label="Previous">${ic('left')}</button><button class="btn sm" data-action="calToday">Today</button><button class="icon-btn" data-action="calNext" aria-label="Next">${ic('right')}</button><span class="range" id="calRange">${esc(calRangeLabel())}</span><span class="grow"></span>
-      <button class="btn sm" data-action="openCals">${ic('plug')}Connect calendar</button><button class="btn sm" data-action="openFilter">${ic('filter')}Filter</button>
-      <span class="seg">${['day', 'week', 'month'].map(m => `<button class="${P.calMode === m ? 'on' : ''}" data-action="calMode" data-m="${m}">${cap(m)}</button>`).join('')}</span></div>${grid}</div></div>`;
+      <span class="grow"></span><button class="icon-btn" data-action="calPrev" aria-label="Previous">${ic('left')}</button><button class="btn sm ghost range" id="calRange" data-action="calDate" title="Pick a date">${esc(calRangeLabel())}</button><button class="icon-btn" data-action="calNext" aria-label="Next">${ic('right')}</button><button class="btn sm" data-action="calToday">Today</button>
+      <span class="seg">${['day', 'week', 'month'].map(m => `<button class="${P.calMode === m ? 'on' : ''}" data-action="calMode" data-m="${m}">${cap(m)}</button>`).join('')}</span><button class="icon-btn" data-action="openFilter" title="Filter" aria-label="Filter">${ic('filter')}</button></div>${grid}</div></div>`;
 }
 
 /* ======================================================================
@@ -2439,22 +2486,42 @@ function openPop(anchor, html, { cls = '', align = 'center', onMount, minWidth }
   el.style.left = left + 'px'; el.style.top = top + 'px';
   onMount && onMount(el);
 }
-function datePicker(anchor, { value, onPick, onClear, align }) {
+function datePicker(anchor, { value, onPick, onClear, align, time, keepOpen }) {
   let view = fromKey(value || S.day || todayKey()); view = new Date(view.getFullYear(), view.getMonth(), 1);
-  let sel = value || null;
+  let sel = value || null, timeVal = time ? (time.value || '') : '', timeOpen = false, justOpened = false;
   const html = () => {
     const first = fromKey(weekStartKey(dkey(view))), today = todayKey();
     const heads = [...Array(7)].map((_, i) => `<span class="h">${new Intl.DateTimeFormat([], { weekday: 'short' }).format(addDays(first, i)).slice(0, 2).toUpperCase()}</span>`).join('');
     const cells = [...Array(42)].map((_, i) => { const d = addDays(first, i), k = dkey(d); return `<button data-dp="pick" data-day="${k}" class="${d.getMonth() !== view.getMonth() ? 'out' : ''} ${k === today ? 'today' : ''} ${k === sel ? 'sel' : ''}">${d.getDate()}</button>`; }).join('');
     return `<div class="dp-top"><button data-dp="prev">‹ Previous</button><button data-dp="today">Today</button><button data-dp="next">Next ›</button></div>
       <div class="dp-m"><b>${new Intl.DateTimeFormat([], { month: 'long', year: 'numeric' }).format(view)}</b><span><button data-dp="mp" aria-label="Previous month">‹</button><button data-dp="mn" aria-label="Next month">›</button></span></div>
-      <div class="dp-g">${heads}${cells}</div>${onClear ? '<div style="margin-top:8px"><button class="btn sm ghost" data-dp="clear">No date</button></div>' : ''}`;
+      <div class="dp-g">${heads}${cells}</div>${time ? `<div class="dp-time" style="margin-top:10px"><button type="button" class="ddf" data-dp="timetoggle" aria-expanded="${timeOpen}"><span>${timeVal ? esc(fmtTime(dateAt('2000-01-01', hm2min(timeVal)))) : 'Add a time'}</span>${ic('chevd')}</button>${timeOpen ? `<div class="dp-tl ${justOpened ? 'anim' : ''}"><input type="text" class="dd-in" data-dp-tin placeholder="Custom time" aria-label="Custom time" autocomplete="off"><div class="dd-sep"></div><div class="dd-list" style="max-height:150px">${timeOptions().map(([v, l]) => `<button type="button" class="dd-opt ${v === timeVal ? 'sel' : ''}" data-dp="timepick" data-v="${v}" data-l="${esc(l.toLowerCase().replace(/\s/g, ''))}">${esc(l)}</button>`).join('')}</div></div>` : ''}${timeVal ? '<button class="btn sm ghost" data-dp="notime" style="margin-top:4px">No time</button>' : ''}</div>` : ''}${onClear ? '<div style="margin-top:8px"><button class="btn sm ghost" data-dp="clear">No date</button></div>' : ''}`;
   };
   openPop(anchor, html(), { cls: 'dp', align: align || 'center', onMount(el) {
+    const fit = () => {   // keep the whole picker on screen, even after the time list expands near the bottom
+      const r = el.getBoundingClientRect(), max = innerHeight - 8;
+      if (r.bottom > max) el.style.top = Math.max(8, parseFloat(el.style.top) - (r.bottom - max)) + 'px';
+    };
+    const repaint = () => { el.innerHTML = html(); fit(); const s = $('.dd-opt.sel', el); if (s && s.scrollIntoView) s.scrollIntoView({ block: 'nearest' }); const i = $('[data-dp-tin]', el); if (i) i.focus({ preventScroll: true }); };
+    const setT = v => { timeVal = v; timeOpen = false; time.onTime(v); el.innerHTML = html(); };
+    el.addEventListener('input', e => {   // typing narrows the list to times that start with what you typed (4: -> 4:00, 4:30 ...)
+      if (!e.target.matches || !e.target.matches('[data-dp-tin]')) return;
+      const q = e.target.value.toLowerCase().replace(/\s/g, '');
+      $$('.dd-opt', el).forEach(o => { o.hidden = !!q && !o.dataset.l.startsWith(q); });
+    });
+    el.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' || !e.target.matches || !e.target.matches('[data-dp-tin]')) return;
+      e.preventDefault(); const v = parseClock(e.target.value);
+      if (v == null) { e.target.style.boxShadow = 'inset 0 -2px 0 var(--warn)'; return; }
+      setT(v);
+    });
     el.addEventListener('click', e => {
       const b = e.target.closest('[data-dp]'); if (!b) return;
+      if (b.dataset.dp === 'timetoggle') { timeOpen = !timeOpen; justOpened = timeOpen; repaint(); justOpened = false; return; }
+      if (b.dataset.dp === 'timepick') { setT(b.dataset.v); return; }
       const a = b.dataset.dp, step = n => { const base = sel || todayKey(); sel = dkey(addDays(fromKey(base), n)); view = new Date(fromKey(sel).getFullYear(), fromKey(sel).getMonth(), 1); onPick(sel); el.innerHTML = html(); };
-      if (a === 'pick') { onPick(b.dataset.day); closePop(); }
+      if (a === 'pick') { onPick(b.dataset.day); if (keepOpen) { sel = b.dataset.day; el.innerHTML = html(); } else closePop(); }
+      else if (a === 'notime') setT('');
       else if (a === 'prev') step(-1); else if (a === 'next') step(1);
       else if (a === 'today') { sel = todayKey(); view = new Date(fromKey(sel).getFullYear(), fromKey(sel).getMonth(), 1); onPick(sel); el.innerHTML = html(); }
       else if (a === 'mp') { view = new Date(view.getFullYear(), view.getMonth() - 1, 1); el.innerHTML = html(); }
@@ -2494,6 +2561,10 @@ function openDropdown(anchor, { options, value, onPick, custom, clear, align = '
     const inp = $('.dd-in', el);
     if (inp) {
       inp.focus();
+      inp.addEventListener('input', () => {   // narrow the list to options that start with what is typed (4: -> 4:00 am, 4:30 am)
+        const q = inp.value.toLowerCase().replace(/\s/g, ''); inp.style.boxShadow = '';
+        $$('.dd-opt', el).forEach(o => { o.hidden = !!q && !o.textContent.toLowerCase().replace(/\s/g, '').startsWith(q); });
+      });
       inp.addEventListener('keydown', e => {
         if (e.key !== 'Enter') return; e.preventDefault();
         const v = custom.parse(inp.value);
@@ -2548,7 +2619,8 @@ function openTask(t) {
   openModal({ title: 'Task', cls: 'tm', bare: true, body: '', noFocus: true, onClose() { TM = null; } });
   renderTaskModal();
 }
-const taskBlock = t => eventsForTask(t).filter(e => !t.due || dkey(e.start) === t.due).sort((a, b) => a.start - b.start)[0];
+const taskBlock = t => eventsForTask(t).filter(e => !t.due || dkey(e.start) === t.due).sort((a, b) => a.start - b.start)[0]
+  || (t.when && t.due ? { start: dateAt(t.due, hm2min(t.when)), editable: false, virtual: true } : undefined);
 function renderTaskModal() {
   if (!TM) return;
   const t = taskByKey(TM.key);
@@ -2573,11 +2645,10 @@ function renderTaskModal() {
   </div>
   <div class="tm-right">
     <button class="icon-btn tm-close" data-action="closeModal" aria-label="Close">${ic('x')}</button>
-    ${prop('Project', 'hash', listName(t.list), false, 'tmProject')}
+    ${prop('List', 'hash', listName(t.list), false, 'tmProject')}
     ${prop('Date', 'cal', t.due ? fmtProp(t.due) : 'No date', !t.due, 'tmDate')}
     ${prop('Time', 'clock', blk ? fmtTime(blk.start) : 'Time', !blk, 'tmTime')}
     ${prop('Duration', 'hourglass', t.est ? fmtDur(t.est) : 'Duration', !t.est, 'tmDur')}
-    ${prop('Priority', 'flag', t.priority ? cap(t.priority) : 'Priority', !t.priority, 'tmPriority')}
     ${prop('Repeat', 'repeat', t.repeat ? cap(t.repeat) : 'Once', !t.repeat, 'tmRepeat')}
     <div class="tm-timer"><div class="tm-clock"><div><small>ACTUAL</small><b id="tmActual">${running ? `${fmtHM(t.actual * 60 + timerSecs())}:${pad(timerSecs() % 60)}` : fmtHM(t.actual * 60)}</b></div><div><small>PLANNED</small><b>${fmtHM(t.est * 60)}</b></div></div>
       <button class="btn accent block" data-action="tmTimer">${ic(running ? 'pause' : 'play')}${running ? 'Pause' : 'Start'}</button>
@@ -2586,7 +2657,7 @@ function renderTaskModal() {
   const l2 = $('.tm-left', box); if (l2) l2.scrollTop = sc;
   const r2 = $('.tm-right', box); if (r2) r2.scrollTop = rsc;
 }
-async function unscheduleTask(t) { for (const e of eventsForTask(t).filter(e => e.editable && (!t.due || dkey(e.start) === t.due))) await deleteEvent(e); renderTaskModal(); }
+async function unscheduleTask(t) { for (const e of eventsForTask(t).filter(e => e.editable && (!t.due || dkey(e.start) === t.due))) await deleteEvent(e); if (t.when) await setTaskDateTime(t, { when: '' }); renderTaskModal(); }
 async function setTaskEst(t, est) {
   const p = updateTask(t, { est }); renderTaskModal();
   const blk = taskBlock(t);
@@ -3066,6 +3137,11 @@ const ACTIONS = {
   toggleTaskEv: a => { const ev = evByKey(a.closest('.evt').dataset.ek), t = ev && taskOf(ev); t && toggleTask(t); },
   schedTask: a => { const t = taskFromEl(a); t && scheduleModal(t); },
   delTask: a => { const t = taskFromEl(a); t && deleteTask(t); },
+  dateTimeTask: a => {   // one picker for both date and time (replaces the separate date and schedule buttons)
+    const t = taskFromEl(a); if (!t) return;
+    datePicker(a, { value: t.due, keepOpen: true, align: 'right', time: { value: t.when || '', onTime: v => setTaskDateTime(t, { when: v || '' }) },
+      onPick: k => setTaskDateTime(t, { due: k }), onClear: () => setTaskDateTime(t, { due: null }) });
+  },
   pickTaskDate: a => { const t = taskFromEl(a); if (t) datePicker(a, { value: t.due, onPick: k => updateTask(t, { due: k }), onClear: () => updateTask(t, { due: null }) }); },
   openEvent: a => { if (S.justDragged) return; const ev = evByKey(a.dataset.ek); if (!ev) return; const t = taskOf(ev); t ? openTask(t) : openEvPanel(ev); },
   closeModal: () => closeModal(),
@@ -3082,6 +3158,7 @@ const ACTIONS = {
   tideDate: a => datePicker(a, { value: S.day, onPick: k => goDay(k) }),
   fab: () => eventModal(null, { start: dateAt(S.day, S.day === todayKey() ? Math.min(1380, Math.ceil(minOfDay(new Date()) / SNAP) * SNAP) : hm2min(P.workStart)) }),
   calPrev: () => (P.calMode === 'month' ? calStep(-1) : scrollCalBy(-calVisible())), calNext: () => (P.calMode === 'month' ? calStep(1) : scrollCalBy(calVisible())),
+  calDate: a => datePicker(a, { value: S.day, align: 'center', onPick: k => goDay(k) }),
   calToday: () => { if (P.calMode === 'month') goDay(todayKey()); else { S.day = todayKey(); updateCalSel(); scrollCalTo(P.calMode === 'week' ? weekStartKey(todayKey()) : todayKey(), true); } },
   calMode: a => { const prev = P.calMode; P.calMode = a.dataset.m; savePrefs(); S.calStart = null; S.calAnchor = (prev !== 'month' && P.calMode !== 'month' && S.calAnchor) ? S.calAnchor : (P.calMode === 'week' ? weekStartKey(S.day) : S.day); render(); },
   addCal: () => window.open('https://calendar.google.com/calendar/u/0/r/settings/createcalendar', '_blank', 'noopener'),
@@ -3098,7 +3175,7 @@ const ACTIONS = {
     const t = taskByKey(TM.key), blk = taskBlock(t), opts = [];
     for (let m = 360; m <= 1320; m += 30) opts.push([min2hm(m), fmtTime(dateAt('2000-01-01', m))]);
     openDropdown(a, { options: opts, value: blk ? min2hm(minOfDay(blk.start)) : '', align: 'right', custom: { placeholder: 'Custom time', parse: parseClock },
-      clear: blk && blk.editable ? { label: 'Clear time', onClear: () => unscheduleTask(t) } : null, onPick: v => { setTaskTime(t, v).then(renderTaskModal); } });
+      clear: blk ? { label: 'Clear time', onClear: () => unscheduleTask(t) } : null, onPick: v => { setTaskTime(t, v).then(renderTaskModal); } });
   },
   tmDur: a => {
     const t = taskByKey(TM.key);
@@ -3647,6 +3724,8 @@ Object.assign(ACTIONS, {
    ====================================================================== */
 async function loadAll() {
   S.loading = true; render();
+  const cached = await evCacheLoad();   // show the saved calendar straight away; the web copy replaces it as weeks load
+  if (cached && cached.calendars.length) { S.calendars = cached.calendars; S.events = cached.events; }
   const [cals, lists] = await Promise.allSettled([
     api(`${CAL_API}/users/me/calendarList`, { params: { minAccessRole: 'freeBusyReader', maxResults: 250 } }),
     api(`${TASKS_API}/users/@me/lists`, { params: { maxResults: 100 } })
@@ -3654,7 +3733,8 @@ async function loadAll() {
   if (cals.status === 'fulfilled') {
     S.calendars = (cals.value.items || []).map(c => ({ id: c.id, name: c.summaryOverride || c.summary || c.id, color: c.backgroundColor || '#4285f4', role: c.accessRole, primary: !!c.primary, selected: !!c.selected }));
     const prim = S.calendars.find(c => c.primary); if (prim && !P.hint && !S.demo) { P.hint = prim.id; savePrefs(); }
-  } else toast('Couldn’t load calendars: ' + cals.reason.message, 'error');
+    evCacheSave();
+  } else if (!(S.calendars.length && !navigator.onLine)) toast('Couldn’t load calendars: ' + cals.reason.message, 'error');
   if (lists.status === 'fulfilled') S.lists = (lists.value.items || []).map(l => ({ id: l.id, title: l.title }));
   else toast('Couldn’t load task lists: ' + lists.reason.message, 'error');
   if (S.listId !== 'all' && !S.lists.some(l => l.id === S.listId)) S.listId = 'all';
@@ -3837,6 +3917,14 @@ function boot() {
     setInterval(() => { if (document.visibilityState === 'visible' && document.hasFocus() && S.token && !modalOpen()) refreshAll(false); }, 60000);
     window.addEventListener('focus', () => { if (S.token && !modalOpen() && Date.now() - lastRefreshAt > 30000) refreshAll(false); });
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.token && !modalOpen()) refreshAll(false); });
+    const autoReconnect = async () => {   // page was disconnected from Google: quietly sign back in whenever we come back online / into view
+      if (S.demo || !S.loaded || Date.now() < S.tokenExp) return;
+      try { await silentRefresh(); $('#reconnect').hidden = true; refreshAll(true); }
+      catch (e) { if (authKind() === 'browser' && !BW && bounceAllowed()) browserSignIn(); else if (authKind() === 'redirect' && bounceAllowed()) redirectSignIn('none'); }
+    };
+    window.addEventListener('online', autoReconnect); window.addEventListener('focus', autoReconnect);
+    window.addEventListener('online', () => { if (S.loaded && !S.demo && S.token) { S.loadedWeeks.clear(); refreshAll(true); } });   // wifi is back: refresh calendar + tasks from Google
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') autoReconnect(); });
   };
   tickers();
   if (bad || location.protocol === 'file:') { $('#signInBtn').disabled = true; $('#redirBtn').disabled = true; $('#browserBtn').disabled = true; return; }
@@ -3852,7 +3940,7 @@ function boot() {
   }
   if (sess) { S.token = sess.t; S.tokenExp = sess.exp; scheduleRefresh((sess.exp - Date.now()) / 1000 + 90); onSignedIn(); }
   else if (left) { /* handled above */ }
-  else if (P.hint && authKind() === 'browser') { $('#app').hidden = true; $('#auth').hidden = false; }
+  else if (P.hint && authKind() === 'browser') { $('#app').hidden = true; $('#auth').hidden = false; if (bounceAllowed()) setTimeout(browserSignIn, 0); }   // returning user, expired token: reconnect through the browser automatically
   else if (P.hint && authKind() === 'redirect') {   // returning user, expired token: quietly bounce through Google and straight back
     if (bounceAllowed()) { redirectSignIn('none'); return; }
     $('#app').hidden = true; $('#auth').hidden = false;
