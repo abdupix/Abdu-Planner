@@ -31,7 +31,7 @@ in the task's notes as marker lines — visible in the Google Tasks app too):
  • Google Tasks stores a due DATE only (no time). Times live on the calendar block.
  • Focus opens a small always-on-top timer window (Chrome/Edge Document Picture-in-Picture; other browsers get a popup).
  • "Try with sample data" on the sign-in screen runs the whole app on made-up data, with no Google account.
- • Preferences, shutdown reflections, a local Trash (deleted tasks) and a running timer
+ • Preferences, a local Trash (deleted tasks) and a running timer
    are kept in localStorage. Guests of events you move are not emailed.
 ================================================================================
 -->
@@ -214,6 +214,15 @@ html.has-bg .nav-search input{background:var(--glass-hi)}
 .grp-l.warn{color:var(--warn)}
 .tcard{display:block;padding:14px 16px 13px;background:var(--surface);border-radius:var(--r-card);box-shadow:var(--sh-sm);cursor:pointer;position:relative;transition:box-shadow .22s var(--ease),transform .22s var(--ease)}
 .tcard:hover{box-shadow:var(--sh-md);transform:translateY(-2px)}
+.lc-row{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:var(--r-ctl);background:var(--surface-2)}
+.lc-name{display:flex;align-items:center;gap:8px;font-weight:600}.lc-name i{width:12px;height:12px;border-radius:4px;flex:none;transition:background .2s}
+.lc-sw{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.lc-sw button[data-c]:not(.lc-auto){width:22px;height:22px;border-radius:50%;border:2px solid transparent;background:var(--c);cursor:pointer;padding:0;transition:transform .15s var(--ease),box-shadow .15s}
+.lc-sw button[data-c]:not(.lc-auto):hover{transform:scale(1.15)}
+.lc-sw button.on{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink-2)}
+.lc-auto{border:0;background:transparent;color:var(--ink-2);font-size:12px;cursor:pointer;padding:2px 6px;border-radius:var(--r-sm)}.lc-auto:hover{background:var(--surface)}
+.tcard::before{content:'';position:absolute;left:0;top:13px;bottom:13px;width:3px;border-radius:0 3px 3px 0;background:var(--lc,transparent);opacity:.9}
+.tcard.done::before{opacity:.35}
 .tcard[draggable=true]{cursor:grab}
 .tcard.dragging{opacity:.4;transform:scale(.97)}
 .tcard.pulse{animation:land .38s var(--ease)}
@@ -293,11 +302,20 @@ html.has-bg .nav-search input{background:var(--glass-hi)}
 .shade{position:absolute;left:0;right:0;background:var(--shade);pointer-events:none}
 .evt{position:absolute;border-radius:var(--r-ctl);padding:4px 7px 4px 8px;overflow:hidden;font-size:12px;line-height:1.3;background:color-mix(in srgb,var(--c) 18%,var(--surface));border-left:3px solid var(--c);user-select:none;-webkit-user-select:none;cursor:pointer;display:flex;gap:6px;box-shadow:var(--sh-xs);min-height:18px;transition:box-shadow .2s,transform .2s var(--ease)}
 .evt:hover{box-shadow:var(--sh-sm)}
-.evt.task{--c:var(--accent);background:color-mix(in srgb,var(--accent) 16%,var(--surface))}
+.evt.task{background:color-mix(in srgb,var(--c) 18%,var(--surface))}
 .evt.ro{cursor:default;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--c) 11%,var(--surface)) 0 6px,color-mix(in srgb,var(--c) 5%,var(--surface)) 6px 12px);box-shadow:none}
 .evt.done{opacity:.6}.evt.done .evt-title{text-decoration:line-through}
 .evt.pending{opacity:.55}
-.evt.dragging{box-shadow:var(--sh-lg);z-index:6;transition:none}
+.evt{transition:box-shadow .2s var(--ease),transform .2s var(--ease)}
+.evt.dragging{box-shadow:0 16px 34px rgba(34,24,12,.24),0 3px 8px rgba(34,24,12,.12);z-index:30;cursor:grabbing;transition:top .08s linear,height .08s linear,transform .18s var(--ease),box-shadow .2s}
+.evt-ghost{opacity:.4;pointer-events:none;box-shadow:none!important;outline:1.5px dashed color-mix(in srgb,var(--c) 70%,transparent);outline-offset:-1.5px;background:transparent!important}
+.evt-ghost>*{opacity:.5}
+.tl-scroll{overflow-anchor:none}
+body.dnd .dcol{-webkit-mask-image:none;mask-image:none}   /* the bottom fade mask clips children to the column, hiding a block dragged into the next day */
+.mcell .it[data-ek],.mcell .it[data-tk]{cursor:grab;touch-action:none}
+.mcell.drop{transform:none}
+.it-float{position:fixed;z-index:200;pointer-events:none;margin:0;font-size:11.5px;border-left:3px solid var(--c,var(--accent));background:color-mix(in srgb,var(--c,var(--accent)) 22%,var(--surface));border-radius:var(--r-ctl);padding:3px 8px;box-shadow:0 14px 30px rgba(34,24,12,.24);transform:scale(1.06) rotate(1.2deg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:transform .18s var(--ease)}
+.it-ghost{opacity:.35}
 .evt.lift{z-index:6;box-shadow:var(--sh-lg)}
 .evt-txt{min-width:0;flex:1}
 .evt-title{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1067,7 +1085,7 @@ const DEFAULT_PREFS = {
   taskRemind: 0, theme: 'auto', workStart: '09:00', workEnd: '17:00', defaultDuration: 30, weekStart: 1,
   visibleCalendars: null, defaultCalendar: null, reflections: {}, listId: 'all', hint: '',
   lite: false, tideOpen: true, tideDays: 1, calMode: 'week', navCollapsed: false,
-  order: {}, filters: { tasks: true, events: true, done: true }, trash: [], timer: null, unschedOpen: false, authMode: '', name: 'Abdu', mica: { window: 55, card: 25, cal: 50, windowBlur: 48, cardBlur: 34, calBlur: 40 },
+  order: {}, listColors: {}, filters: { tasks: true, events: true, done: true }, trash: [], timer: null, unschedOpen: false, authMode: '', name: 'Abdu', mica: { window: 55, card: 25, cal: 50, windowBlur: 48, cardBlur: 34, calBlur: 40 },
   pomo: { focus: 25, break: 5, sound: true, stats: { date: '', sessions: 0, minutes: 0 } }
 };
 let P = { ...DEFAULT_PREFS };
@@ -1077,6 +1095,7 @@ function loadPrefs() {
   P.pomo = { ...DEFAULT_PREFS.pomo, ...(P.pomo || {}) };
   P.mica = { ...DEFAULT_PREFS.mica, ...(P.mica || {}) };
   if (!Array.isArray(P.trash)) P.trash = [];
+  if (!P.listColors || typeof P.listColors !== 'object') P.listColors = {};
 }
 const APPEARANCE_KEYS = ['theme', 'lite', 'mica', 'name', 'navCollapsed', 'tideOpen', 'tideDays', 'unschedOpen', 'pomo', 'calMode', 'weekStart', 'workStart', 'workEnd', 'defaultDuration', 'taskRemind'];
 function savePrefs() {
@@ -1089,7 +1108,19 @@ function savePrefs() {
     localStorage.setItem(PREF_KEY, JSON.stringify(P));
   } catch (e) { /* storage unavailable */ }
 }
-function applyLite() { document.documentElement.classList.toggle('lite', !!P.lite); if (typeof applyBg === 'function') applyBg(); }
+let IDLE_LITE = false, idleT = null;
+const liteOn = () => !!P.lite || IDLE_LITE;
+function applyLite() { document.documentElement.classList.toggle('lite', liteOn()); if (typeof applyBg === 'function') applyBg(); }
+/* While the tab or window isn't being used, drop the wallpaper and the glass blur so the browser can free that memory.
+   Waits a few seconds first so quick window switches don't flicker; everything comes straight back when you return. */
+function setIdleLite(on) { if (IDLE_LITE === on) return; IDLE_LITE = on; if (!P.lite) applyLite(); }
+function idleCheck() {
+  clearTimeout(idleT);
+  if (document.visibilityState === 'hidden') idleT = setTimeout(() => setIdleLite(true), 4000);
+  else if (!document.hasFocus()) idleT = setTimeout(() => setIdleLite(true), 20000);
+  else setIdleLite(false);
+}
+document.addEventListener('visibilitychange', idleCheck); window.addEventListener('blur', idleCheck); window.addEventListener('focus', idleCheck); window.addEventListener('pageshow', idleCheck);
 function applyTheme() { const r = document.documentElement; P.theme === 'auto' ? r.removeAttribute('data-theme') : (r.dataset.theme = P.theme); updateNavTone(); if (typeof applyBg === 'function' && bgCache) applyBg(); }
 
 /* ======================================================================
@@ -1109,6 +1140,8 @@ const taskByKey = k => S.tasks.find(t => tk(t) === k);
 const evByKey = k => S.events.find(e => e.key === k) || (String(k).startsWith('task|') ? taskBlocksAsEvents().find(e => e.key === k) : null);
 const taskOf = e => (e.taskId ? taskIdx.get(e.taskList + ':' + e.taskId) || null : null);
 const eventsForTask = t => S.events.filter(e => e.taskId === t.id && e.taskList === t.list);
+const LIST_PALETTE = ['#5484ed', '#51b749', '#ffb878', '#dbadff', '#46d6db', '#ff887c', '#fbd75b', '#7ae7bf', '#a4bdfc', '#dc2127'];
+const listColor = id => { if (P.listColors && P.listColors[id]) return P.listColors[id]; const i = S.lists.findIndex(l => l.id === id); return LIST_PALETTE[(i < 0 ? 0 : i) % LIST_PALETTE.length]; };
 const listName = id => S.lists.find(l => l.id === id)?.title || 'Tasks';
 const defaultListId = () => (S.listId !== 'all' ? S.listId : S.lists[0]?.id);
 const tops = () => S.tasks.filter(t => !t.parent);
@@ -1940,7 +1973,7 @@ function taskBlocksAsEvents() {
   const linked = new Set(S.events.filter(e => e.taskId).map(e => e.taskList + ':' + e.taskId));
   return S.tasks.filter(t => !t.parent && t.due && t.when && !t.pending && !linked.has(tk(t)) && (P.filters.done || !t.done)).map(t => {
     const start = dateAt(t.due, hm2min(t.when)), end = new Date(+start + (t.est || P.defaultDuration) * 60000);
-    return { key: 'task|' + tk(t), id: t.id, cal: '', calName: 'Tasks', color: 'var(--accent)', calColor: 'var(--accent)', colorId: '', title: t.title, noTitle: false, start, end, allDay: false, editable: false,
+    return { key: 'task|' + tk(t), id: t.id, cal: '', calName: 'Tasks', color: listColor(t.list), calColor: listColor(t.list), colorId: '', title: t.title, noTitle: false, start, end, allDay: false, editable: false,
       desc: '', attendees: [], creator: null, organizer: null, attachments: [], meet: '', visibility: 'default', reminders: null, rrule: '', declined: false, free: false, link: '', loc: '', recurring: false, taskList: t.list, taskId: t.id, virtual: true };
   });
 }
@@ -2118,6 +2151,7 @@ function dayStats(key, o = {}) {
    ====================================================================== */
 function render() {
   if (!S.token) return;
+  if ((CD && CD.started) || (MD && MD.started)) { S.renderDeferred = true; return; }   // never rebuild the board under a card that is being dragged
   idx();
   const sh = $('#shell');
   sh.dataset.view = S.view; sh.dataset.mob = S.mob;
@@ -2133,7 +2167,6 @@ function renderNav() {
   const cnt = { today: nToday };
   const item = ([v, l, i]) => `<button class="ni ${S.view === v ? 'on' : ''}" data-action="nav" data-view="${v}" data-drop="${v}" title="${l}">${ic(i)}<span class="lbl">${l}</span>${v === 'horizon' && S.view === 'horizon' ? '<i class="dot"></i>' : (cnt[v] ? `<span class="cnt">${cnt[v]}</span>` : '')}</button>`;
   $('#navItems').innerHTML = NAV.map(item).join('') +
-    `<div style="height:10px"></div><button class="ni" data-action="openPlan" title="Plan today">${ic('sun')}<span class="lbl">Plan today</span></button><button class="ni" data-action="openShutdown" title="Shut down">${ic('moon')}<span class="lbl">Shut down</span></button>` +
     `<div class="nav-label">Views</div>` +
     `<button class="ni ${S.view === 'calendar' ? 'on' : ''}" data-action="nav" data-view="calendar" title="Calendar">${ic('cal')}<span class="lbl">Calendar</span></button>` +
     `<button class="ni ${S.view === 'trash' ? 'on' : ''}" data-action="nav" data-view="trash" title="Trash">${ic('trash')}<span class="lbl">Trash</span>${P.trash.length ? `<span class="cnt">${P.trash.length}</span>` : ''}</button>`;
@@ -2207,7 +2240,7 @@ function card(t, o = {}) {
   const time = whenStart ? `<button type="button" class="tc-time pill-btn" data-action="dateTimeTask" title="Change date &amp; time">${dkey(whenStart) === dayK ? '' : fmtDueLabel(dkey(whenStart)) + ' · '}${fmtTime(whenStart)}</button>` : '';
   const subHtml = subs.length ? `<ul class="tc-subs">${subs.slice(0, 6).map(s => `<li class="${s.done ? 'done' : ''}" data-sid="${esc(s.id)}"><button class="radio sm ${s.done ? 'on' : ''}" data-action="toggleSubCard" aria-label="${s.done ? 'Mark sub-task not done' : 'Mark sub-task done'}">${ic('check')}</button><span>${esc(s.title)}</span></li>`).join('')}${subs.length > 6 ? `<li class="more">+${subs.length - 6} more</li>` : ''}</ul>` : '';
   const k = tk(t);
-  return `<div class="tcard dtask ${t.done ? 'done' : ''} ${S.pulse === k ? 'pulse' : ''} ${S.fresh && S.fresh.has(k) ? 'fresh' : ''}" data-key="${esc(k)}" data-grp="${o.overdue ? 'od' : 'open'}" ${t.done ? '' : 'data-drag="1"'} data-action="openTask">
+  return `<div class="tcard dtask ${t.done ? 'done' : ''} ${S.pulse === k ? 'pulse' : ''} ${S.fresh && S.fresh.has(k) ? 'fresh' : ''}" data-key="${esc(k)}" style="--lc:${esc(listColor(t.list))}" data-grp="${o.overdue ? 'od' : 'open'}" ${t.done ? '' : 'data-drag="1"'} data-action="openTask">
     <div class="tc-head"><button class="radio md ${t.done ? 'on' : ''}" data-action="toggleTask" aria-label="${t.done ? 'Mark not done' : 'Mark done'}">${ic('check')}</button>
       <div class="tc-title">${esc(t.title) || '<i class="muted">Untitled</i>'}</div>${time}</div>
     ${subHtml}${pills.length ? `<div class="tc-meta">${pills.join('')}</div>` : ''}
@@ -2278,7 +2311,7 @@ function renderList() {
       <div class="bar"><i class="b-busy" style="width:${st.busy / total * 100}%"></i><i class="b-plan" style="width:${within / total * 100}%"></i><i class="b-over" style="width:${Math.max(0, st.planned - within) / total * 100}%"></i></div>
       <span class="small ${st.over ? 'warn' : 'muted'}" style="${st.over ? 'color:var(--warn);font-weight:600' : ''}">${st.over ? 'Over by ' + fmtDur(st.over) : st.count + ' task' + (st.count === 1 ? '' : 's')}</span></div>` +
       addForm(today) + `<div class="stack">${od.length ? `<div class="grp-l warn"><span>Overdue</span></div>${od.map(t => card(t, { overdue: true, day: today })).join('')}` : ''}${open.map(t => card(t, { day: today, showList: true })).join('')}${done.map(t => card(t, { day: today })).join('')}</div>`;
-    if (!od.length && !open.length && !done.length) body = body.replace('</div></div>', '</div></div>') + `<div class="empty"><b>Nothing planned for today</b>Add a task above or use Plan today.</div>`;
+    if (!od.length && !open.length && !done.length) body = body.replace('</div></div>', '</div></div>') + `<div class="empty"><b>Nothing planned for today</b>Add a task above.</div>`;
   }
   return mh('Today', listSelect()) + `<div class="pagescroll"><div class="page-inner">${body}</div></div>`;
 }
@@ -2322,13 +2355,13 @@ function layoutDay(evs, key) {
 const rangeLabel = (a, b) => `${fmtTime(a)} – ${fmtTime(b)}`;
 function evHTML(it) {
   const e = it.ev, t = taskOf(e), hrs = (it.e - it.s) / 60;
-  const cls = ['evt', S.evKey === e.key ? 'sel' : '', t ? 'task' : '', e.editable ? '' : 'ro', t && t.done ? 'done' : '', e.pending ? 'pending' : '', hrs < 0.7 ? 'tight' : ''].join(' ');
+  const cls = ['evt', S.evKey === e.key ? 'sel' : '', t ? 'task' : '', e.editable || e.virtual ? '' : 'ro', t && t.done ? 'done' : '', e.pending ? 'pending' : '', hrs < 0.7 ? 'tight' : ''].join(' ');
   const left = (it.col / it.cols * 100).toFixed(3), width = (100 / it.cols).toFixed(3);
   return `<div class="${cls}" tabindex="0" role="button" data-action="openEvent" data-ek="${esc(e.key)}" aria-label="${esc(e.title)}, ${esc(rangeLabel(e.start, e.end))}"
-    style="top:calc(var(--hh) * ${(it.s / 60).toFixed(4)});height:calc(var(--hh) * ${hrs.toFixed(4)} - 2px);left:calc(${left}% + 2px);width:calc(${width}% - 6px);--c:${esc(e.color)}">
+    style="top:calc(var(--hh) * ${(it.s / 60).toFixed(4)});height:calc(var(--hh) * ${hrs.toFixed(4)} - 2px);left:calc(${left}% + 2px);width:calc(${width}% - 6px);--c:${esc(t ? listColor(t.list) : e.color)}">
     ${t ? `<button class="evt-chk ${t.done ? 'on' : ''}" data-action="toggleTaskEv" aria-label="Toggle task done">${ic('check')}</button>` : ''}
     <div class="evt-txt"><div class="evt-title">${esc(t ? t.title : e.title)}</div><div class="evt-time">${esc(rangeLabel(e.start, e.end))}</div></div>
-    ${e.editable ? '<div class="resize"></div>' : ''}</div>`;
+    ${e.editable || e.virtual ? '<div class="resize"></div>' : ''}</div>`;
 }
 function dcolHTML(k, dis) {
   const ws = hm2min(P.workStart), we = hm2min(P.workEnd);
@@ -2471,8 +2504,8 @@ function renderCalendar() {
     const dis = displayEvents(), m = fromKey(S.day).getMonth();
     const hd = fromKey(range[0]), heads = [...Array(7)].map((_, i) => `<div class="mhd">${new Intl.DateTimeFormat([], { weekday: 'short' }).format(addDays(hd, i))}</div>`).join('');
     grid = `<div class="month">${heads}${range.map(k => {
-      const items = [...dis.filter(e => overlapsDay(e, k)).map(e => ({ t: e.title, c: e.color })), ...tops().filter(t => !t.done && t.due === k && !eventsForTask(t).length).map(t => ({ t: t.title, c: null }))];
-      return `<div class="mcell ${fromKey(k).getMonth() !== m ? 'out' : ''} ${k === today ? 'today' : ''}" data-action="monthDay" data-day="${k}"><span class="n">${fromKey(k).getDate()}</span>${items.slice(0, 3).map(i => `<div class="it" ${i.c ? `style="--c:${esc(i.c)}"` : ''}>${esc(i.t)}</div>`).join('')}${items.length > 3 ? `<div class="more">+${items.length - 3} more</div>` : ''}</div>`;
+      const items = [...dis.filter(e => overlapsDay(e, k)).map(e => { const tt = taskOf(e); return { t: tt ? tt.title : e.title, c: tt ? listColor(tt.list) : e.color, ek: e.key }; }), ...(P.filters.tasks ? tops().filter(t => !t.done && t.due === k && !t.when && !eventsForTask(t).length).map(t => ({ t: t.title, c: listColor(t.list), tk: tk(t) })) : [])];
+      return `<div class="mcell ${fromKey(k).getMonth() !== m ? 'out' : ''} ${k === today ? 'today' : ''}" data-action="monthDay" data-day="${k}"><span class="n">${fromKey(k).getDate()}</span>${items.slice(0, 3).map(i => `<div class="it" ${i.ek ? `data-ek="${esc(i.ek)}"` : `data-tk="${esc(i.tk)}"`} ${i.c ? `style="--c:${esc(i.c)}"` : ''}>${esc(i.t)}</div>`).join('')}${items.length > 3 ? `<div class="more">+${items.length - 3} more</div>` : ''}</div>`;
     }).join('')}</div>`;
   } else grid = `<div class="tl-wrap" id="calTL">${calStripHTML()}</div>`;
   return `<header class="mh"><button class="icon-btn menu-btn" data-action="toggleNav" aria-label="Menu">${ic('menu')}</button><h1>Calendar</h1><span class="grow"></span><button class="btn sm" data-action="collapseCal" title="Back to Horizon">${ic('shrink')}Back to board</button></header>
@@ -2753,7 +2786,7 @@ let SETSEC = 'general';
 function settingsModal(sec) {
   if (sec) SETSEC = sec;
   const cals = writableCals(), m = P.mica;
-  const secs = [['general', 'General', 'gear'], ['planning', 'Planning', 'clock'], ['appearance', 'Appearance', 'image'], ['focus', 'Focus timer', 'focus'], ['account', 'Account', 'user']];
+  const secs = [['general', 'General', 'gear'], ['planning', 'Planning', 'clock'], ['lists', 'Lists', 'hash'], ['appearance', 'Appearance', 'image'], ['focus', 'Focus timer', 'focus'], ['account', 'Account', 'user']];
   const sl = (label, key) => `<div class="srow"><span>${label}</span><input type="range" min="0" max="100" value="${m[key]}" data-mica="${key}" aria-label="${label}"><b data-micaval="${key}">${m[key]}</b></div>`;
   const grp = (title, hint, k, kb) => `<div class="mgroup"><h4>${title}</h4><p class="muted small">${hint}</p>${sl('Strength', k)}${sl('Blur', kb)}</div>`;
   const sec_ = (k, inner) => `<section class="sec" data-sec="${k}" ${SETSEC === k ? '' : 'hidden'}>${inner}</section>`;
@@ -2774,6 +2807,8 @@ function settingsModal(sec) {
           <div class="lab">Calendar for task blocks${ddField('cal', cals.map(c => [c.id, c.name]), blockCal()?.id)}</div>
           <div class="lab">Google Tasks time<span class="muted small" id="extStatus" style="font-weight:400">${esc(extStatusText())}</span></div>
           <label class="check"><input type="checkbox" name="keepnote" ${P.keepNoteTime ? 'checked' : ''}>Also keep the “⏰ HH:MM” line in task notes (off = removed once Google has the real time)</label>`)}
+        ${sec_('lists', `<h3>Task lists</h3><p class="muted small" style="margin:-4px 0 0">Give each Google Tasks list its own colour. It shows on its cards and on the calendar. Changes apply instantly.</p>
+          ${S.lists.length ? S.lists.map(l => `<div class="lc-row" data-list="${esc(l.id)}"><div class="lc-name"><i style="background:${esc(listColor(l.id))}"></i>${esc(l.title)}</div><div class="lc-sw">${Object.values(EVENT_COLORS).map(x => x[1]).map(h => `<button type="button" class="${listColor(l.id).toLowerCase() === h ? 'on' : ''}" data-action="listColor" data-c="${h}" style="--c:${h}" aria-label="Colour ${h}"></button>`).join('')}<button type="button" class="lc-auto" data-action="listColor" data-c="" title="Automatic colour">Auto</button></div></div>`).join('') : '<p class="muted">Your task lists will appear here once they load.</p>'}`)}
         ${sec_('appearance', `<h3>Appearance</h3>
           ${(() => {
             const row = (slot, title, hint) => `<div class="lab">${title}<span class="inline"><span class="thumb" id="thumb-${slot}" style="${slotUrl(slot) ? `background-image:url('${slotUrl(slot)}')` : ''}"></span><button type="button" class="btn sm" data-action="pickBg" data-slot="${slot}">${ic('image')}Upload image…</button><button type="button" class="btn sm ghost" data-action="clearBg" data-slot="${slot}">Remove</button></span><span class="muted small" style="font-weight:400">${hint}</span></div>`;
@@ -2810,7 +2845,7 @@ function settingsModal(sec) {
   });
 }
 function helpModal() {
-  const rows = [['n', 'New task in the selected day'], ['t', 'Go to today'], ['← / →', 'Previous / next day'], ['/', 'Search'], ['p', 'Plan today'], ['s', 'Shut down'], ['r', 'Refresh'], ['?', 'This help'], ['Esc', 'Close dialogs']];
+  const rows = [['n', 'New task in the selected day'], ['t', 'Go to today'], ['← / →', 'Previous / next day'], ['/', 'Search'], ['r', 'Refresh'], ['?', 'This help'], ['Esc', 'Close dialogs']];
   openModal({
     title: 'Keyboard shortcuts',
     body: rows.map(([k, d]) => `<div class="rowx"><span>${d}</span><span class="kbd">${k}</span></div>`).join('') +
@@ -2963,113 +2998,10 @@ async function openPomodoro(t) {
   PM = mountPomo(document, window, t, () => closeModal(), true, $('#mBody'));
 }
 
-/* ======================================================================
-   Guided planning & shutdown
-   ====================================================================== */
-let PLAN = null;
-const PLAN_STEPS = ['Yesterday', 'Pull in', 'Hours', 'Confirm'];
-function openPlan() {
-  const today = todayKey();
-  if (S.day !== today) goDay(today);
-  const overdue = tops().filter(t => !t.done && t.due && t.due < today);
-  PLAN = { step: 0, choice: Object.fromEntries(overdue.map(t => [tk(t), 'today'])), pull: new Set(), ws: P.workStart, we: P.workEnd };
-  openModal({ title: 'Plan today', cls: 'wide', body: '', foot: '', noFocus: true, onClose() { PLAN = null; } });
-  renderPlan();
-}
-function planToday() {
-  const today = todayKey(), set = new Map();
-  tops().filter(t => !t.done && t.due === today).forEach(t => set.set(tk(t), t));
-  Object.entries(PLAN.choice).forEach(([k, c]) => { const t = taskByKey(k); if (t && c === 'today') set.set(k, t); });
-  PLAN.pull.forEach(k => { const t = taskByKey(k); if (t) set.set(k, t); });
-  return [...set.values()];
-}
-function renderPlan() {
-  if (!PLAN) return;
-  const today = todayKey(), P0 = PLAN;
-  const steps = `<div class="steps">${PLAN_STEPS.map((_, i) => `<i class="${i <= P0.step ? 'on' : ''}"></i>`).join('')}</div><p class="lede"><b>${P0.step + 1}. ${PLAN_STEPS[P0.step]}</b></p>`;
-  let body = '', primary = 'Next';
-  if (P0.step === 0) {
-    const ov = tops().filter(t => !t.done && t.due && t.due < today);
-    body = `<p class="lede">These are unfinished from earlier days. Decide where each one goes.</p>` + (ov.length ? ov.map(t => `<div class="rowx"><span class="nm">${esc(t.title)}<div class="muted small">Due ${esc(fmtDueLabel(t.due))}${t.est ? ' · ' + fmtDur(t.est) : ''}</div></span>
-      <span class="segx" data-key="${esc(tk(t))}">${[['today', 'Today'], ['backlog', 'Backlog'], ['skip', 'Leave']].map(([v, l]) => `<button data-action="planChoice" data-v="${v}" class="${P0.choice[tk(t)] === v ? 'on' : ''}">${l}</button>`).join('')}</span></div>`).join('')
-      : `<div class="empty"><b>All caught up</b>Nothing is left over from earlier days.</div>`);
-  } else if (P0.step === 1) {
-    const soon = tops().filter(t => !t.done && t.due && t.due > today && t.due <= dkey(addDays(new Date(), 7)));
-    const back = tops().filter(t => !t.done && !t.due);
-    const row = t => `<label class="rowx"><span class="nm">${esc(t.title)}${t.est ? `<span class="muted small"> · ${fmtDur(t.est)}</span>` : ''}</span><input type="checkbox" data-action="planPull" data-key="${esc(tk(t))}" ${P0.pull.has(tk(t)) ? 'checked' : ''}></label>`;
-    body = `<p class="lede">Pull anything else you want to do today.</p>` + (soon.length ? `<h4 style="margin:10px 0 2px">Coming up this week</h4>${soon.map(row).join('')}` : '') + (back.length ? `<h4 style="margin:14px 0 2px">Backlog</h4>${back.map(row).join('')}` : '') + (!soon.length && !back.length ? `<div class="empty"><b>Nothing to pull in</b>Your backlog and week ahead are empty.</div>` : '');
-  } else if (P0.step === 2) {
-    const st = dayStats(today, { ws: P0.ws, we: P0.we });
-    body = `<p class="lede">Set the hours you can really work today. Meetings inside them are subtracted.</p>
-      <div class="row2 form"><label>Start<input type="time" data-change="planWs" value="${esc(P0.ws)}"></label><label>End<input type="time" data-change="planWe" value="${esc(P0.we)}"></label></div>
-      <div class="verdict" style="margin-top:14px">${fmtDur(st.work)} of working time · ${fmtDur(st.busy)} in meetings · <b>${fmtDur(st.avail)} available</b></div>`;
-  } else {
-    const ts = planToday(), st = dayStats(today, { ws: P0.ws, we: P0.we });
-    const already = new Set(tops().filter(t => t.due === today).map(tk));
-    const added = ts.filter(t => !already.has(tk(t))).reduce((a, t) => a + t.est, 0);
-    const totalPlanned = st.planned + added, over = Math.max(0, totalPlanned - st.avail);
-    body = `<p class="lede">${ts.length} task${ts.length === 1 ? '' : 's'} for today.</p>` +
-      (ts.length ? ts.map(t => `<div class="rowx"><span class="nm">${esc(t.title)}</span><span class="pill">${t.est ? fmtDur(t.est) : 'no estimate'}</span></div>`).join('') : '<div class="empty"><b>An open day</b>You can still add tasks from the board.</div>') +
-      `<div class="verdict ${over ? 'over' : 'ok'}">Planned ${fmtDur(totalPlanned)} of ${fmtDur(st.avail)} available (${esc(P0.ws)}–${esc(P0.we)}). ${over ? `Over by ${fmtDur(over)} — consider dropping something.` : `${fmtDur(st.avail - totalPlanned)} to spare.`}</div>`;
-    primary = 'Confirm plan';
-  }
-  setModal(steps + body, `<span class="l"></span>${P0.step ? '<button class="btn" data-action="planBack">Back</button>' : '<button class="btn" data-action="closeModal">Cancel</button>'}<button class="btn accent" data-action="planNext">${primary}</button>`);
-}
-async function applyPlan() {
-  const today = todayKey(), jobs = [];
-  Object.entries(PLAN.choice).forEach(([k, c]) => { const t = taskByKey(k); if (!t) return; if (c === 'today') jobs.push(() => updateTask(t, { due: today })); if (c === 'backlog') jobs.push(() => updateTask(t, { due: null })); });
-  PLAN.pull.forEach(k => { const t = taskByKey(k); if (t) jobs.push(() => updateTask(t, { due: today })); });
-  P.workStart = PLAN.ws; P.workEnd = PLAN.we; savePrefs();
-  const n = planToday().length;
-  closeModal(); render();
-  await runBatch(jobs);
-  toast(`Plan set — ${n} task${n === 1 ? '' : 's'} for today.`, 'success');
-  navTo('horizon');
-}
 async function runBatch(jobs, n = 4) {
   let i = 0, ok = 0;
   await Promise.all(Array.from({ length: Math.min(n, jobs.length) }, async () => { while (i < jobs.length) { if (await jobs[i++]()) ok++; } }));
   return ok;
-}
-let SHUT = null;
-function openShutdown() {
-  const today = todayKey();
-  if (S.day !== today) goDay(today);
-  const open = tops().filter(t => !t.done && t.due && t.due <= today);
-  SHUT = { choice: Object.fromEntries(open.map(t => [tk(t), 'tomorrow'])), text: P.reflections[today] || '' };
-  openModal({ title: 'Shut down for the day', cls: 'wide', body: '', foot: '', noFocus: true, onClose() { SHUT = null; } });
-  renderShutdown();
-}
-function renderShutdown() {
-  if (!SHUT) return;
-  const today = todayKey(), open = tops().filter(t => !t.done && t.due && t.due <= today);
-  const done = tops().filter(t => t.done && (t.due === today || (t.completedAt && dkey(new Date(t.completedAt)) === today)));
-  const st = dayStats(today);
-  const past = Object.keys(P.reflections).filter(k => k < today && P.reflections[k]).sort().slice(-3).reverse();
-  setModal(`<p class="lede">${done.length} done${st.done ? ' (' + fmtDur(st.done) + ')' : ''}, ${open.length} still open.</p>
-    ${open.map(t => `<div class="rowx"><span class="nm">${esc(t.title)}</span><span class="segx" data-key="${esc(tk(t))}">${[['done', 'Done'], ['tomorrow', 'Tomorrow'], ['backlog', 'Backlog'], ['keep', 'Keep']].map(([v, l]) => `<button data-action="shutChoice" data-v="${v}" class="${SHUT.choice[tk(t)] === v ? 'on' : ''}">${l}</button>`).join('')}</span></div>`).join('') || '<div class="empty"><b>Nothing left open</b>A clean slate.</div>'}
-    <div class="form" style="margin-top:14px"><label>One-line reflection<input type="text" id="reflect" maxlength="200" placeholder="What went well, or what would you change?" value="${esc(SHUT.text)}"></label></div>
-    ${past.length ? `<div class="muted small" style="margin-top:12px">Earlier: ${past.map(k => `<div>${esc(k)} — ${esc(P.reflections[k])}</div>`).join('')}</div>` : ''}`,
-    `<button class="btn" data-action="closeModal">Cancel</button><button class="btn accent" data-action="shutConfirm">Close out the day</button>`);
-}
-function saveReflection(day, text) {
-  if (text) { P.reflections[day] = text; const keys = Object.keys(P.reflections).sort(); keys.slice(0, Math.max(0, keys.length - 120)).forEach(k => delete P.reflections[k]); }
-  else delete P.reflections[day];
-  savePrefs();
-}
-async function applyShutdown() {
-  const today = todayKey(), tomorrow = dkey(addDays(new Date(), 1));
-  saveReflection(today, ($('#reflect')?.value || '').trim());
-  const jobs = [];
-  Object.entries(SHUT.choice).forEach(([k, c]) => {
-    const t = taskByKey(k); if (!t) return;
-    if (c === 'done') jobs.push(() => toggleTask(t));
-    if (c === 'tomorrow') jobs.push(() => updateTask(t, { due: tomorrow }));
-    if (c === 'backlog') jobs.push(() => updateTask(t, { due: null }));
-  });
-  closeModal(); render();
-  await runBatch(jobs);
-  toast('Day closed. See you tomorrow.', 'success');
 }
 
 /* ======================================================================
@@ -3140,6 +3072,15 @@ const ACTIONS = {
   toggleNav: () => { S.navOpen = !S.navOpen; render(); }, mobTab: a => { S.mob = a.dataset.tab; if (S.mob === 'day') P.tideOpen = true; render(); },
   jumpToday: a => datePicker(a, { value: S.day, align: 'right', onPick: k => goDay(k) }),
   resetMica: () => { P.mica = { ...DEFAULT_PREFS.mica }; $$('[data-mica]').forEach(r => { r.value = P.mica[r.dataset.mica]; const o = $(`[data-micaval="${r.dataset.mica}"]`); if (o) o.textContent = r.value; }); applyMica(); savePrefs(); toast('Mica levels reset', 'success', { ttl: 1800 }); },
+  listColor: a => {
+    const row = a.closest('.lc-row'), id = row && row.dataset.list; if (!id) return;
+    if (a.dataset.c) P.listColors[id] = a.dataset.c; else delete P.listColors[id];
+    savePrefs();
+    const cur = listColor(id).toLowerCase();
+    $('.lc-name i', row).style.background = listColor(id);
+    $$('.lc-sw button[data-c]', row).forEach(b => b.classList.toggle('on', !!b.dataset.c && b.dataset.c === cur));
+    render();
+  },
   setSec: a => { SETSEC = a.dataset.sec; $$('.set .sec').forEach(x => { x.hidden = x.dataset.sec !== SETSEC; }); $$('.set-nav button').forEach(b => b.classList.toggle('on', b.dataset.sec === SETSEC)); },
   toggleUnsched: a => { const el = a.closest('.bcol.unsched'); if (!el) return; el.classList.toggle('collapsed'); P.unschedOpen = !el.classList.contains('collapsed'); savePrefs(); const tab = $('.u-tab', el); tab && tab.setAttribute('aria-expanded', String(P.unschedOpen)); },
   listDD: a => openDropdown(a, { options: [['all', 'All lists'], ...S.lists.map(l => [l.id, l.title])], value: S.listId, align: 'right', onPick: v => { S.listId = v; P.listId = v; savePrefs(); render(); } }),
@@ -3162,7 +3103,6 @@ const ACTIONS = {
   closeModal: () => closeModal(),
   profileMenu: a => openPop(a, `<div class="menu"><div class="mh2">${esc(S.demo ? 'Demo mode (sample data)' : (P.hint || ''))}</div><button data-action="openSettings">${ic('gear')}Settings</button><button data-action="cycleTheme">${ic(P.theme === 'auto' ? 'auto' : P.theme === 'dark' ? 'moon' : 'sun')}Theme: ${esc(P.theme)}</button><button data-action="pickBg">${ic('image')}Change wallpaper${isDarkTheme() ? ' (night)' : ''}</button><button data-action="openHelp">${ic('help')}Keyboard shortcuts</button><button data-action="refresh">${ic('undo')}Refresh</button><button data-action="signOut">${ic('out')}${S.demo ? 'Exit demo' : 'Sign out'}</button></div>`, { align: 'left' }),
   cycleTheme: () => { P.theme = { auto: 'light', light: 'dark', dark: 'auto' }[P.theme] || 'auto'; savePrefs(); applyTheme(); },
-  openPlan: () => { S.navOpen = false; openPlan(); }, openShutdown: () => { S.navOpen = false; openShutdown(); },
   openSettings: () => settingsModal(), openHelp: () => helpModal(), openCals: () => calsModal(),
   refresh: () => refreshAll(true),
   expandCal: () => expandCalendar(), collapseCal: () => collapseCalendar(), pickBg: a => { bgSlot = (a && a.dataset && a.dataset.slot) || (isDarkTheme() ? 'dark' : 'light'); $('#bgFile').click(); }, clearBg: a => clearBg(a && a.dataset && a.dataset.slot),
@@ -3206,12 +3146,6 @@ const ACTIONS = {
   tmTimer: () => { const t = taskByKey(TM.key); if (!t) return; P.timer && P.timer.key === tk(t) ? stopTimer() : startTimer(t); },
   tmFocus: () => { const t = taskByKey(TM.key); closeModal(true, true); t && openPomodoro(t); },
   tmUnsched: async () => { const t = taskByKey(TM.key); for (const e of eventsForTask(t).filter(e => e.editable && (!t.due || dkey(e.start) === t.due))) await deleteEvent(e); renderTaskModal(); },
-  planChoice: a => { PLAN.choice[a.closest('[data-key]').dataset.key] = a.dataset.v; renderPlan(); },
-  planPull: a => { const k = a.dataset.key; a.checked ? PLAN.pull.add(k) : PLAN.pull.delete(k); },
-  planBack: () => { PLAN.step = Math.max(0, PLAN.step - 1); renderPlan(); },
-  planNext: () => { if (PLAN.step < 3) { PLAN.step++; renderPlan(); } else applyPlan(); },
-  shutChoice: a => { SHUT.text = $('#reflect')?.value || ''; SHUT.choice[a.closest('[data-key]').dataset.key] = a.dataset.v; renderShutdown(); },
-  shutConfirm: () => applyShutdown(),
   noop: () => {}
 };
 function calStep(n) {
@@ -3221,8 +3155,6 @@ function calStep(n) {
 }
 const CHANGES = {
   list: a => { S.listId = a.value; P.listId = a.value; savePrefs(); render(); },
-  planWs: a => { PLAN.ws = a.value || PLAN.ws; renderPlan(); },
-  planWe: a => { PLAN.we = a.value || PLAN.we; renderPlan(); }
 };
 document.addEventListener('click', e => {
   const a = e.target.closest('[data-action]'); if (!a || a.disabled) return;
@@ -3308,8 +3240,6 @@ document.addEventListener('keydown', e => {
   else if (k === 'ArrowLeft') { e.preventDefault(); shiftDay(-1); }
   else if (k === 'ArrowRight') { e.preventDefault(); shiftDay(1); }
   else if (k === '?') helpModal();
-  else if (k === 'p') openPlan();
-  else if (k === 's') openShutdown();
   else if (k === 'r') refreshAll(true);
 });
 
@@ -3495,7 +3425,7 @@ document.addEventListener('pointercancel', e => { if (CD && e.pointerId === CD.p
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && CD && CD.started) { e.stopPropagation(); endCardDrag(false); } }, true);
 document.addEventListener('touchmove', e => { if (CD && CD.started && e.cancelable) e.preventDefault(); }, { passive: false });
 function endCardDrag(commit) {
-  const d = CD; if (!d) return; CD = null;
+  const d = CD; if (!d) return; CD = null; S.renderDeferred = false;
   cancelAnimationFrame(d.raf); clearTimeout(d.timer);
   try { d.card.releasePointerCapture(d.pid); } catch (er) {}
   document.addEventListener('click', swallowClick, true); setTimeout(() => document.removeEventListener('click', swallowClick, true), 80);
@@ -3535,6 +3465,55 @@ function endCardDrag(commit) {
   }, 250);
 }
 
+/* ---------- month view: drag an event or task chip onto another day ---------- */
+let MD = null;
+document.addEventListener('pointerdown', e => {
+  const it = e.target.closest && e.target.closest('.mcell .it[data-ek], .mcell .it[data-tk]');
+  if (!it || MD || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  const ev = it.dataset.ek ? evByKey(it.dataset.ek) : null, task = it.dataset.tk ? taskByKey(it.dataset.tk) : (ev ? taskOf(ev) : null);
+  if (!(task || (ev && ev.editable)) || (ev && ev.pending)) return;
+  const r = it.getBoundingClientRect();
+  MD = { it, ev, task, pid: e.pointerId, type: e.pointerType, x0: e.clientX, y0: e.clientY, offX: e.clientX - r.left, offY: e.clientY - r.top, from: it.closest('.mcell').dataset.day, started: false, armed: e.pointerType !== 'touch', over: null };
+  if (!MD.armed) MD.timer = setTimeout(() => { if (MD) { MD.armed = true; navigator.vibrate && navigator.vibrate(8); } }, 280);
+});
+document.addEventListener('pointermove', e => {
+  const d = MD; if (!d || e.pointerId !== d.pid) return;
+  if (!d.started) {
+    const dist = Math.hypot(e.clientX - d.x0, e.clientY - d.y0);
+    if (!d.armed) { if (dist > 8) { clearTimeout(d.timer); MD = null; } return; }
+    if (dist < 5) return;
+    d.started = true; document.body.classList.add('dnd'); closePop(true);
+    const r = d.it.getBoundingClientRect(), f = d.it.cloneNode(true);
+    f.classList.add('it-float'); f.removeAttribute('data-ek'); f.removeAttribute('data-tk'); f.style.width = r.width + 'px'; document.body.appendChild(f); d.float = f; d.it.classList.add('it-ghost');
+    try { d.it.setPointerCapture(d.pid); } catch (er) {}
+  }
+  d.float.style.left = (e.clientX - d.offX) + 'px'; d.float.style.top = (e.clientY - d.offY) + 'px';
+  const cell = document.elementFromPoint(e.clientX, e.clientY)?.closest('.mcell');
+  if (d.over !== cell) { d.over && d.over.classList.remove('drop'); d.over = cell; cell && cell.dataset.day !== d.from && cell.classList.add('drop'); }
+});
+function endMonthDrag(commit) {
+  const d = MD; if (!d) return; MD = null; clearTimeout(d.timer);
+  setTimeout(() => { if (S.renderDeferred) { S.renderDeferred = false; render(); } }, 260);
+  try { d.it.releasePointerCapture(d.pid); } catch (er) {}
+  if (!d.started) return;
+  document.body.classList.remove('dnd'); d.over && d.over.classList.remove('drop');
+  S.justDragged = true; setTimeout(() => (S.justDragged = false), 150);
+  document.addEventListener('click', swallowClick, true); setTimeout(() => document.removeEventListener('click', swallowClick, true), 80);
+  const day = commit && d.over ? d.over.dataset.day : null, f = d.float;
+  const r = (d.over && day !== d.from ? d.over : d.it).getBoundingClientRect();
+  f.style.transition = 'left .2s var(--ease), top .2s var(--ease), opacity .2s, transform .2s var(--ease)'; f.style.opacity = '0'; f.style.transform = 'scale(.9)';
+  if (day && day !== d.from) { f.style.left = (r.left + 8) + 'px'; f.style.top = (r.top + 30) + 'px'; }
+  else { const b = d.it.getBoundingClientRect(); f.style.left = b.left + 'px'; f.style.top = b.top + 'px'; }
+  setTimeout(() => f.remove(), 220);
+  d.it.classList.remove('it-ghost');
+  if (!day || day === d.from) return;
+  if (d.task) setTaskDateTime(d.task, { due: day });
+  else if (d.ev) { const n = Math.round((+fromKey(day) - +fromKey(d.from)) / 86400000), mv = x => new Date(+x + 0), sh = x => { const y = new Date(x); y.setDate(y.getDate() + n); return y; }; updateEvent(d.ev, { start: sh(d.ev.start), end: sh(d.ev.end) }); }
+}
+document.addEventListener('pointerup', e => { if (MD && e.pointerId === MD.pid) endMonthDrag(true); });
+document.addEventListener('pointercancel', e => { if (MD && e.pointerId === MD.pid) endMonthDrag(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && MD && MD.started) { e.stopPropagation(); endMonthDrag(false); } }, true);
+
 /* ---------- create an event by double-click (tap on touch) ---------- */
 const coarse = matchMedia('(pointer:coarse)').matches;
 document.addEventListener(coarse ? 'click' : 'dblclick', e => {
@@ -3549,7 +3528,7 @@ let DRAG = null;
 document.addEventListener('pointerdown', e => {
   const el = e.target.closest && e.target.closest('.dcol .evt'); if (!el || e.target.closest('.evt-chk')) return;
   if (e.pointerType === 'mouse' && e.button !== 0) return;
-  const ev = evByKey(el.dataset.ek); if (!ev || !ev.editable || ev.pending || ev.allDay) return;
+  const ev = evByKey(el.dataset.ek); if (!ev || !(ev.editable || ev.virtual) || ev.pending || ev.allDay) return;
   const resize = !!e.target.closest('.resize'), col = el.closest('.dcol'), dayKey = col.dataset.day;
   const ds = fromKey(dayKey), de = addDays(ds, 1);
   if (!resize && (ev.start < ds || ev.end > de)) return;
@@ -3563,7 +3542,11 @@ document.addEventListener('pointermove', e => {
   const d = DRAG, dy = e.clientY - d.y0, dx = e.clientX - d.x0;
   if (!d.armed) { if (Math.abs(dy) > 8) { clearTimeout(d.timer); DRAG = null; } return; }
   if (!d.moved && Math.abs(dy) < 4 && Math.abs(dx) < 4) return;
-  d.moved = true; d.el.classList.add('dragging');
+  if (!d.moved) {   // first movement: lift the block and leave a faint outline where it came from
+    d.moved = true; d.el.classList.add('dragging'); document.body.classList.add('dnd');
+    if (!d.resize) { const g = d.el.cloneNode(true); g.classList.remove('dragging', 'lift'); g.classList.add('evt-ghost'); g.removeAttribute('data-action'); g.removeAttribute('data-ek'); g.removeAttribute('tabindex'); d.ghost = g; d.el.parentNode.insertBefore(g, d.el); }
+    try { d.el.setPointerCapture(d.pid); } catch (er) {}
+  }
   const dm = Math.round(dy / d.hh * 60 / SNAP) * SNAP, dsMs = +fromKey(d.dayKey), deMs = +addDays(fromKey(d.dayKey), 1), dur = d.e0 - d.s0;
   if (d.resize) { d.ns = d.s0; d.ne = Math.min(deMs, Math.max(d.s0 + SNAP * 60000, d.e0 + dm * 60000)); d.nday = d.dayKey; d.dc = 0; }
   else {
@@ -3575,19 +3558,22 @@ document.addEventListener('pointermove', e => {
   const minutes = (d.ns - +fromKey(d.nday)) / 60000;
   d.el.style.top = `calc(var(--hh) * ${minutes / 60})`;
   d.el.style.height = `calc(var(--hh) * ${(d.ne - d.ns) / 3600000} - 2px)`;
-  d.el.style.transform = d.dc ? `translateX(${d.dc * d.colW}px)` : '';
+  d.el.style.transform = d.resize ? '' : `translateX(${d.dc * d.colW}px) scale(1.025)`;
   const tl = d.el.querySelector('.evt-time'); if (tl) tl.textContent = rangeLabel(new Date(d.ns), new Date(d.ne));
 });
 document.addEventListener('pointerup', e => {
   if (!DRAG || e.pointerId !== DRAG.pid) return;
   const d = DRAG; DRAG = null; clearTimeout(d.timer);
-  d.el.classList.remove('dragging', 'lift'); d.el.style.transform = '';
+  d.el.classList.remove('dragging', 'lift'); d.el.style.transform = ''; document.body.classList.remove('dnd'); if (d.ghost) d.ghost.remove();
+  try { d.el.releasePointerCapture(d.pid); } catch (er) {}
   if (!d.moved) return;
   S.justDragged = true; setTimeout(() => (S.justDragged = false), 120);
   if (d.ns === d.s0 && d.ne === d.e0) { render(); return; }
+  const tt = d.ev.virtual ? taskOf(d.ev) : null;
+  if (tt) { const nd = new Date(d.ns); if (d.resize) updateTask(tt, { est: Math.max(5, Math.round((d.ne - d.ns) / 60000)) }, { noEventSync: true }); else setTaskDateTime(tt, { due: dkey(nd), when: `${pad(nd.getHours())}:${pad(nd.getMinutes())}` }); return; }
   updateEvent(d.ev, { start: new Date(d.ns), end: new Date(d.ne) });
 });
-document.addEventListener('pointercancel', () => { if (DRAG) { clearTimeout(DRAG.timer); DRAG = null; render(); } });
+document.addEventListener('pointercancel', () => { if (DRAG) { clearTimeout(DRAG.timer); if (DRAG.ghost) DRAG.ghost.remove(); DRAG = null; document.body.classList.remove('dnd'); render(); } });
 document.addEventListener('touchmove', e => { if (DRAG && DRAG.armed && DRAG.type === 'touch' && e.cancelable) e.preventDefault(); }, { passive: false });
 
 
@@ -3991,7 +3977,7 @@ async function lightBlob(blob) {   // the wallpaper sits behind heavy blur, so a
 }
 async function _applyBg() {
   await loadBgCache();
-  const blob = P.lite ? null : ((isDarkTheme() ? (bgCache.dark || bgCache.light) : bgCache.light) || null);
+  const blob = liteOn() ? null : ((isDarkTheme() ? (bgCache.dark || bgCache.light) : bgCache.light) || null);
   const r = document.documentElement;
   if (blob === bgBlob) { updateNavTone(); refreshBgThumbs(); return; }   // already showing it
   if (blob) {
@@ -4066,7 +4052,7 @@ function armGesture() {
   document.addEventListener('pointerdown', go, true); document.addEventListener('keydown', go, true);
 }
 function boot() {
-  loadPrefs(); applyTheme(); document.documentElement.classList.toggle('lite', !!P.lite);
+  loadPrefs(); applyTheme(); document.documentElement.classList.toggle('lite', liteOn());
   $('#icSearch').innerHTML = ic('search');
   applyMica(); applyBg();
   try { const mq = matchMedia('(prefers-color-scheme: dark)'), on = () => { if (P.theme === 'auto') applyBg(); }; if (mq.addEventListener) mq.addEventListener('change', on); else if (mq.addListener) mq.addListener(on); } catch (e) {}
