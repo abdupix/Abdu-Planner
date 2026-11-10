@@ -3712,12 +3712,31 @@ function descEditor(ev, host) {
     const t = (e.clipboardData || window.clipboardData).getData('text/plain'); if (!t) return;
     cmd('insertHTML', renderDesc(t).replace(/(<br>)+$/, '')); dirty = true;
   });
+  /* Autosave: the description is saved quietly about a second after you stop typing (and on blur, tab switch or close),
+     without redrawing the panel, so the caret never jumps and nothing is lost if you click away. */
+  let saveT = null, chain = Promise.resolve();
+  const current = () => { const empty = !ed.textContent.replace(/​/g, '').trim() && !ed.querySelector('hr'); return empty ? '' : cleanHtml(ed.innerHTML).replace(/​/g, ''); };
+  const flush = () => {
+    clearTimeout(saveT);
+    if (!dirty) return;
+    const html = current();
+    if (html === (ev.desc || '')) { dirty = false; return; }
+    if (ev.pending) { saveT = setTimeout(flush, 1200); return; }   // event still being created: try again shortly
+    dirty = false;
+    const prev = ev.desc; ev.desc = html;
+    chain = chain.then(async () => {
+      S.pending++;
+      try { await api(`${CAL_API}/calendars/${enc(ev.cal)}/events/${enc(ev.id)}`, { method: 'PATCH', params: { sendUpdates: 'none' }, body: { description: html || null } }); }
+      catch (err) { if (ev.desc === html) ev.desc = prev; dirty = true; toast(`Couldn’t save the description: ${err.message}`, 'error'); }
+      finally { S.pending--; }
+    });
+  };
+  ed.addEventListener('input', () => { dirty = true; clearTimeout(saveT); saveT = setTimeout(flush, 900); });
+  const away = () => { if (document.visibilityState === 'hidden') flush(); };
+  document.addEventListener('visibilitychange', away); window.addEventListener('pagehide', flush);
   ed.addEventListener('blur', () => {
-    if (dirty) {
-      const empty = !ed.textContent.replace(/​/g, '').trim() && !ed.querySelector('hr');
-      const html = empty ? '' : cleanHtml(ed.innerHTML).replace(/​/g, '');
-      if (html !== ev.desc) { patchEvent(ev, { desc: html }, { description: html || null }); return; }
-    }
+    flush();
+    document.removeEventListener('visibilitychange', away); window.removeEventListener('pagehide', flush);
     setTimeout(renderEvPanel, 0);
   });
   ed.focus();
