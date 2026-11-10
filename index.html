@@ -1082,7 +1082,7 @@ const PREF_KEY = 'dayline.prefs.v1';   // same key as earlier versions so you st
 const DEFAULT_PREFS = {
   taskRemind: 0, theme: 'auto', workStart: '09:00', workEnd: '17:00', defaultDuration: 30, weekStart: 1,
   visibleCalendars: null, defaultCalendar: null, reflections: {}, listId: 'all', hint: '',
-  lite: false, tideOpen: true, tideDays: 1, calMode: 'week', navCollapsed: false,
+  lite: false, idleLite: true, tideOpen: true, tideDays: 1, calMode: 'week', navCollapsed: false,
   order: {}, listColors: {}, filters: { tasks: true, events: true, done: true }, trash: [], timer: null, unschedOpen: false, authMode: '', name: 'Abdu', mica: { window: 55, card: 25, cal: 50, windowBlur: 48, cardBlur: 34, calBlur: 40 },
   pomo: { focus: 25, break: 5, sound: true, stats: { date: '', sessions: 0, minutes: 0 } }
 };
@@ -1095,7 +1095,7 @@ function loadPrefs() {
   if (!Array.isArray(P.trash)) P.trash = [];
   if (!P.listColors || typeof P.listColors !== 'object') P.listColors = {};
 }
-const APPEARANCE_KEYS = ['theme', 'lite', 'mica', 'name', 'navCollapsed', 'tideOpen', 'tideDays', 'unschedOpen', 'pomo', 'calMode', 'weekStart', 'workStart', 'workEnd', 'defaultDuration', 'taskRemind'];
+const APPEARANCE_KEYS = ['theme', 'lite', 'idleLite', 'mica', 'name', 'navCollapsed', 'tideOpen', 'tideDays', 'unschedOpen', 'pomo', 'calMode', 'weekStart', 'workStart', 'workEnd', 'defaultDuration', 'taskRemind'];
 function savePrefs() {
   try {
     if (S.demo) {   // demo mode only remembers how the app looks, never its (made-up) data
@@ -1111,7 +1111,7 @@ const liteOn = () => !!P.lite || IDLE_LITE;
 function applyLite() { document.documentElement.classList.toggle('lite', liteOn()); if (typeof applyBg === 'function') applyBg(); }
 /* While the tab or window isn't being used, drop the wallpaper and the glass blur so the browser can free that memory.
    Waits a few seconds first so quick window switches don't flicker; everything comes straight back when you return. */
-function setIdleLite(on) { if (IDLE_LITE === on) return; IDLE_LITE = on; if (!P.lite) applyLite(); }
+function setIdleLite(on) { if (on && !P.idleLite) on = false; if (IDLE_LITE === on) return; IDLE_LITE = on; if (!P.lite) applyLite(); }
 function idleCheck() {
   clearTimeout(idleT);
   if (document.visibilityState === 'hidden') idleT = setTimeout(() => setIdleLite(true), 4000);
@@ -2805,6 +2805,7 @@ function settingsModal(sec) {
           <div class="lab">Your name<input type="text" name="uname" maxlength="30" value="${esc(P.name || '')}" placeholder="Abdu"></div>
           <div class="lab">Theme${ddField('theme', [['auto', 'Match system'], ['light', 'Light'], ['dark', 'Dark']], P.theme)}</div>
           <label class="check"><input type="checkbox" name="lite" ${P.lite ? 'checked' : ''}>Lite mode: no wallpaper or glass blur (uses much less memory)</label>
+          <label class="check"><input type="checkbox" name="idlelite" ${P.idleLite ? 'checked' : ''}>Switch to lite mode automatically while this window is inactive</label>
           <div class="lab">Week starts on${ddField('wk', [[1, 'Monday'], [0, 'Sunday']], P.weekStart)}</div>`)}
         ${sec_('planning', `<h3>Planning</h3>
           <div class="row2"><label>Working day starts<input type="time" name="ws" value="${esc(P.workStart)}"></label><label>Working day ends<input type="time" name="we" value="${esc(P.workEnd)}"></label></div>
@@ -2841,7 +2842,7 @@ function settingsModal(sec) {
         e.preventDefault();
         const f = new FormData(e.target), wkChanged = P.weekStart !== +f.get('wk') || P.defaultCalendar !== f.get('cal');
         if (hm2min(f.get('we')) <= hm2min(f.get('ws'))) { toast('Working hours must end after they start.', 'error'); SETSEC = 'planning'; $$('.set .sec').forEach(x => { x.hidden = x.dataset.sec !== 'planning'; }); $$('.set-nav button').forEach(b => b.classList.toggle('on', b.dataset.sec === 'planning')); return; }
-        P.name = (f.get('uname') || '').trim() || 'Abdu'; P.workStart = f.get('ws'); P.workEnd = f.get('we'); P.defaultDuration = +f.get('dur'); P.taskRemind = +f.get('trem'); P.weekStart = +f.get('wk'); P.defaultCalendar = f.get('cal'); P.theme = f.get('theme'); P.lite = f.has('lite'); P.keepNoteTime = f.has('keepnote');
+        P.name = (f.get('uname') || '').trim() || 'Abdu'; P.workStart = f.get('ws'); P.workEnd = f.get('we'); P.defaultDuration = +f.get('dur'); P.taskRemind = +f.get('trem'); P.weekStart = +f.get('wk'); P.defaultCalendar = f.get('cal'); P.theme = f.get('theme'); P.lite = f.has('lite'); P.idleLite = f.has('idlelite'); if (!P.idleLite) IDLE_LITE = false; P.keepNoteTime = f.has('keepnote');
         P.pomo.focus = Math.max(1, Math.min(120, parseInt(f.get('pf')) || 25)); P.pomo.break = Math.max(1, Math.min(120, parseInt(f.get('pb')) || 5)); P.pomo.sound = f.has('ps');
         savePrefs(); applyTheme(); applyLite(); closeModal();
         if (wkChanged) { S.loadedWeeks.clear(); }
